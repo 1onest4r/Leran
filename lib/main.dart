@@ -1,27 +1,20 @@
 import 'package:flutter/material.dart';
+import 'screens/home_page.dart';
 
 void main() {
-  runApp(MyApp());
+  runApp(const Leran());
 }
 
-class MyApp extends StatelessWidget {
+class Leran extends StatelessWidget {
+  const Leran({super.key});
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      home: Scaffold(
-        body: Row(
-          children: [
-            Container(
-              width: MediaQuery.of(context).size.width * 0.25,
-              color: const Color.fromARGB(86, 64, 77, 104),
-            ),
-            Expanded(
-              child: Container(color: const Color.fromARGB(49, 46, 56, 200)),
-            ),
-          ],
-        ),
-      ),
+      title: "Leran note taking app",
+      theme: ThemeData(primarySwatch: Colors.blue),
+      home: const HomePage(),
     );
   }
 }
