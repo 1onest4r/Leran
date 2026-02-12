@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_demo/widgets_layout_demo.dart';
 // Import the second file so we can navigate to it
 import 'dart_demo_screen.dart';
 
@@ -42,6 +43,19 @@ class HomeScreen extends StatelessWidget {
               Navigator.push(
                 context,
                 MaterialPageRoute(builder: (context) => const DartDemoScreen()),
+              );
+            },
+          ),
+          ListTile(
+            title: const Text("2. Widgets and layout"),
+            leading: const Icon(Icons.code), // Optional: adds a little icon
+            onTap: () {
+              // Navigate to the new screen defined in the other file
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const WidgetsLayoutDemo(),
+                ),
               );
             },
           ),
