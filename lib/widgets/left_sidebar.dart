@@ -6,58 +6,48 @@ class LeftSidebar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // 1. Fake data to make it look like you have files
-    final List<String> noteFiles = [
-      "Flutter Ideas",
-      "Grocery List",
-      "Meeting Notes",
-      "Journal 2024",
-      "App Design Specs",
-      "To-Do",
+    final List<String> files = [
+      "algorithms_intro.md",
+      "bio_neural_nets.md",
+      "Project_Botanical.md", // This one will be active
+      "d3_visualization.md",
+      "react_performance.md",
+      "q4_goals_draft.md",
+      "style_guide_v2.css",
+      "fractal_geometry.md",
     ];
 
     return Container(
-      color: Colors.grey[100],
-      padding: const EdgeInsets.all(10.0),
+      color: const Color(0xFF252526),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // --- TOP BUTTONS (Create, Search, Settings) ---
           Container(
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: Colors.grey.shade300),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.grey.shade200,
-                  blurRadius: 4,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
+            padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
             child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                _iconBtn(Icons.add, Colors.blue),
-                _iconBtn(Icons.search, Colors.black54),
-                _iconBtn(Icons.settings, Colors.black54),
+                _iconBtn(Icons.add_box_outlined, Colors.yellowAccent),
+                _iconBtn(Icons.search, Colors.grey),
+                _iconBtn(Icons.hub_outlined, Colors.grey),
+                _iconBtn(Icons.settings, Colors.grey),
               ],
             ),
           ),
 
-          const SizedBox(height: 20),
+          Divider(color: Colors.grey[800], height: 1),
 
           // --- SECTION TITLE (Like "EXPLORER" in VS Code) ---
           Padding(
-            padding: const EdgeInsets.only(left: 8.0, bottom: 8.0),
+            padding: const EdgeInsets.all(12.0),
             child: Text(
               "YOUR NOTES",
               style: TextStyle(
-                color: Colors.grey[600],
+                color: Colors.grey[500],
                 fontWeight: FontWeight.bold,
-                fontSize: 12,
-                letterSpacing: 1.0,
+                fontSize: 10,
+                letterSpacing: 1.5,
               ),
             ),
           ),
@@ -66,48 +56,83 @@ class LeftSidebar extends StatelessWidget {
           // We use Expanded so the list fills the rest of the height
           Expanded(
             child: ListView.builder(
-              itemCount: noteFiles.length,
+              itemCount: files.length,
               itemBuilder: (context, index) {
+                // Let's make the 3rd item (index 2) the "Active" one
+                bool isActive = index == 2;
+
                 return Container(
-                  margin: const EdgeInsets.only(bottom: 4),
-                  decoration: BoxDecoration(
-                    // Let's highlight the first item to look like it's "Selected"
-                    color: index == 0 ? Colors.white : Colors.transparent,
-                    borderRadius: BorderRadius.circular(6),
-                  ),
+                  color: isActive
+                      ? const Color(0xFF37373D)
+                      : Colors.transparent,
                   child: ListTile(
-                    // Tighter spacing to look like a file list
                     dense: true,
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 8),
-                    visualDensity: const VisualDensity(
-                      horizontal: 0,
-                      vertical: -4,
-                    ),
-
-                    // The Icon
-                    leading: Icon(
-                      Icons.description_outlined,
-                      size: 18,
-                      color: index == 0 ? Colors.blue : Colors.grey[600],
-                    ),
-
-                    // The Filename
+                    visualDensity: const VisualDensity(vertical: -3),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 15),
                     title: Text(
-                      noteFiles[index],
+                      files[index],
                       style: TextStyle(
-                        fontWeight: index == 0
-                            ? FontWeight.w600
-                            : FontWeight.normal,
-                        color: index == 0 ? Colors.blue[900] : Colors.black87,
+                        // Monospace font for that coding look
+                        fontFamily: 'Courier',
+                        fontSize: 13,
+                        color: isActive
+                            ? const Color(0xFFDCDCAA)
+                            : Colors.grey[400],
                       ),
                     ),
-
-                    onTap: () {
-                      // Later you will add logic to switch notes here
-                    },
+                    onTap: () {},
                   ),
                 );
               },
+            ),
+          ),
+
+          Divider(color: Colors.grey[800], height: 1),
+
+          Container(
+            height: 33.5, // Slightly taller for better readability
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            color: const Color(0xFF1E1E1E), // Darker contrast background
+            child: Row(
+              children: [
+                const Icon(
+                  Icons.timer_outlined,
+                  size: 14,
+                  color: Colors.yellowAccent,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  "SESSION TIME",
+                  style: TextStyle(
+                    color: Colors.grey[600],
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 1,
+                  ),
+                ),
+                const Spacer(),
+                // The Digital Timer display
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 2,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.black38,
+                    borderRadius: BorderRadius.circular(4),
+                    border: Border.all(color: Colors.grey.shade800),
+                  ),
+                  child: const Text(
+                    "00:42:15", // Static text for now
+                    style: TextStyle(
+                      fontFamily: 'Courier', // Digital clock look
+                      color: Colors.white70,
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
         ],
@@ -117,12 +142,10 @@ class LeftSidebar extends StatelessWidget {
 
   // Helper for the top buttons to keep code clean
   Widget _iconBtn(IconData icon, Color color) {
-    return InkWell(
-      onTap: () {},
-      child: Padding(
-        padding: const EdgeInsets.all(8.0),
-        child: Icon(icon, color: color, size: 22),
-      ),
+    return IconButton(
+      onPressed: () {},
+      icon: Icon(icon, color: color, size: 20),
+      padding: EdgeInsets.zero,
     );
   }
 }

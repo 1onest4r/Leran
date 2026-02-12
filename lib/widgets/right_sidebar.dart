@@ -5,96 +5,197 @@ class RightSidebar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // We use a STACK so we can float the button on top of the content
-    return Stack(
+    return Column(
       children: [
-        // LAYER 1: The Main Content (Column)
-        Column(
-          children: [
-            // --- HEADER (Integrated into note section) ---
-            Container(
-              padding: const EdgeInsets.fromLTRB(
-                20,
-                40,
-                60,
-                10,
-              ), // Right padding 60 to avoid button
-              child: const TextField(
-                style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
-                decoration: InputDecoration(
-                  hintText: "Title",
-                  border: InputBorder.none, // Removes the box
-                  // This is the "Simple Underscore" you asked for
-                  enabledBorder: UnderlineInputBorder(
-                    borderSide: BorderSide(color: Colors.grey, width: 1.0),
+        // --- 1. THE MAIN CONTENT AREA (Expanded) ---
+        Expanded(
+          child: Stack(
+            children: [
+              // Scrollable Content
+              SingleChildScrollView(
+                padding: const EdgeInsets.all(40),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Title
+                    const Text(
+                      "Project_Botanical.md",
+                      style: TextStyle(
+                        fontSize: 32,
+                        fontWeight: FontWeight.bold,
+                        fontFamily: 'Courier',
+                        color: Colors.white,
+                      ),
+                    ),
+
+                    const SizedBox(height: 10),
+                    Divider(color: Colors.grey[800]),
+                    const SizedBox(height: 30),
+
+                    // Subheader
+                    const Text(
+                      "Organic structures in data visualization",
+                      style: TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                        fontFamily: 'Courier',
+                        color: Colors.white,
+                      ),
+                    ),
+                    const SizedBox(height: 15),
+
+                    // Paragraph text
+                    RichText(
+                      text: const TextSpan(
+                        style: TextStyle(
+                          fontSize: 16,
+                          height: 1.6,
+                          color: Colors.grey,
+                          fontFamily: 'sans-serif',
+                        ),
+                        children: [
+                          TextSpan(
+                            text:
+                                "The visualization of complex networks often benefits from ",
+                          ),
+                          TextSpan(
+                            text: "`organic algorithms`", // Inline code style
+                            style: TextStyle(
+                              color: Colors.yellowAccent,
+                              backgroundColor: Color(0xFF2D2D2D),
+                              fontFamily: 'Courier',
+                            ),
+                          ),
+                          TextSpan(
+                            text:
+                                ". By simulating natural growth patterns, we can uncover clusters that strictly hierarchical layouts might obscure.",
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    const SizedBox(height: 30),
+
+                    // The "Observation" Box (Blockquote)
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF252526),
+                        border: Border(
+                          left: BorderSide(
+                            color: Colors.yellowAccent.withOpacity(0.8),
+                            width: 4,
+                          ),
+                        ),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            "OBSERVATION",
+                            style: TextStyle(
+                              color: Colors.yellowAccent.withOpacity(0.8),
+                              fontWeight: FontWeight.bold,
+                              fontSize: 12,
+                              letterSpacing: 1,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          const Text(
+                            "The node density increases towards the upper right quadrant, suggesting a strong correlation between the Umbel structures and the temporal data points collected in Q3.",
+                            style: TextStyle(color: Colors.grey, fontSize: 14),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    const SizedBox(height: 50),
+                    // Just a visual end marker to show where the note ends
+                    Center(
+                      child: Icon(Icons.more_horiz, color: Colors.grey[800]),
+                    ),
+                  ],
+                ),
+              ),
+
+              // Hamburger Menu (Top Right)
+              Positioned(
+                top: 20,
+                right: 20,
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF2D2D2D),
+                    borderRadius: BorderRadius.circular(4),
+                    border: Border.all(color: Colors.grey.shade700),
                   ),
-                  focusedBorder: UnderlineInputBorder(
-                    borderSide: BorderSide(color: Colors.black87, width: 2.0),
+                  child: IconButton(
+                    icon: const Icon(Icons.menu, color: Colors.white),
+                    onPressed: () {},
                   ),
                 ),
               ),
-            ),
-
-            // --- NOTE BODY ---
-            Expanded(
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: const TextField(
-                  maxLines: null, // Allows infinite lines
-                  keyboardType: TextInputType.multiline,
-                  decoration: InputDecoration(
-                    hintText: "Start typing your note here...",
-                    border: InputBorder.none, // Clean look without borders
-                  ),
-                  style: TextStyle(fontSize: 16, height: 1.5),
-                ),
-              ),
-            ),
-
-            // --- FOOTER (1, 2, 3) ---
-            // Keeping this at the bottom as per original design
-            Container(
-              height: 50,
-              decoration: BoxDecoration(
-                color: Colors.grey[50],
-                border: Border(top: BorderSide(color: Colors.grey.shade200)),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  _footerButton("1. Format"),
-                  _footerButton("2. Tags"),
-                  _footerButton("3. Export"),
-                ],
-              ),
-            ),
-          ],
+            ],
+          ),
         ),
 
-        // LAYER 2: The Floating Hamburger Button
-        // We use Positioned to place it exactly where we want
-        Positioned(
-          top: 30,
-          right: 20,
-          child: FloatingActionButton.small(
-            backgroundColor: Colors.white,
-            foregroundColor: Colors.black87,
-            elevation: 2, // Slight shadow
-            onPressed: () {
-              // Open options menu logic here
-            },
-            child: const Icon(Icons.menu),
+        // --- 2. BOTTOM TABS ---
+        Container(
+          height: 35,
+          decoration: BoxDecoration(
+            color: const Color(0xFF1E1E1E),
+            border: Border(top: BorderSide(color: Colors.grey.shade800)),
+          ),
+          child: Row(
+            children: [
+              _bottomTab("Project_Botanical", isActive: true),
+              _bottomTab("research_notes_v2", isActive: false),
+              _bottomTab("Canva: Q4 Goals", isActive: false),
+              Container(
+                width: 35,
+                alignment: Alignment.center,
+                child: const Icon(Icons.add, size: 16, color: Colors.grey),
+              ),
+            ],
           ),
         ),
       ],
     );
   }
 
-  // A helper widget to make the footer code cleaner
-  Widget _footerButton(String text) {
-    return TextButton(
-      onPressed: () {},
-      child: Text(text, style: const TextStyle(color: Colors.black54)),
+  Widget _bottomTab(String text, {required bool isActive}) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 15),
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: isActive ? const Color(0xFF252526) : Colors.transparent,
+        border: Border(
+          right: BorderSide(color: Colors.grey.shade800, width: 0.5),
+          top: isActive
+              ? const BorderSide(color: Colors.yellowAccent, width: 2)
+              : BorderSide.none,
+        ),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            Icons.description_outlined,
+            size: 14,
+            color: isActive ? Colors.yellowAccent : Colors.grey,
+          ),
+          const SizedBox(width: 8),
+          Text(
+            text,
+            style: TextStyle(
+              color: isActive ? Colors.white : Colors.grey,
+              fontSize: 12,
+            ),
+          ),
+          if (isActive) ...[
+            const SizedBox(width: 8),
+            const Icon(Icons.close, size: 12, color: Colors.white),
+          ],
+        ],
+      ),
     );
   }
 }
