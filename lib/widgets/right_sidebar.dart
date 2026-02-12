@@ -1,124 +1,108 @@
 import 'package:flutter/material.dart';
 
-class RightSidebar extends StatelessWidget {
+class RightSidebar extends StatefulWidget {
   const RightSidebar({super.key});
+
+  @override
+  State<RightSidebar> createState() => _RightSectionState();
+}
+
+class _RightSectionState extends State<RightSidebar> {
+  final TextEditingController _titleController = TextEditingController(
+    text: "Project_Botanical.md",
+  );
+  late SyntaxHighlightingController _bodyController;
+
+  @override
+  void initState() {
+    super.initState();
+    String initialText =
+        """The visualization of complex networks often benefits from 'organic algorithms'. 
+
+By simulating natural growth patterns, we can uncover clusters that strictly hierarchical layouts might obscure.
+
+"OBSERVATION
+The node density increases towards the upper right quadrant
+and this sentence spans multiple lines safely."
+
+The end.""";
+
+    _bodyController = SyntaxHighlightingController(text: initialText);
+  }
 
   @override
   Widget build(BuildContext context) {
     return Column(
       children: [
-        // --- 1. THE MAIN CONTENT AREA (Expanded) ---
+        // --- MAIN EDITING AREA ---
         Expanded(
           child: Stack(
             children: [
-              // Scrollable Content
-              SingleChildScrollView(
-                padding: const EdgeInsets.all(40),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Title
-                    const Text(
-                      "Project_Botanical.md",
-                      style: TextStyle(
+              Column(
+                children: [
+                  // 1. THE HEADER
+                  Container(
+                    padding: const EdgeInsets.fromLTRB(40, 40, 80, 10),
+                    child: TextField(
+                      controller: _titleController,
+                      cursorColor: Colors.white,
+                      style: const TextStyle(
                         fontSize: 32,
                         fontWeight: FontWeight.bold,
                         fontFamily: 'Courier',
                         color: Colors.white,
                       ),
-                    ),
-
-                    const SizedBox(height: 10),
-                    Divider(color: Colors.grey[800]),
-                    const SizedBox(height: 30),
-
-                    // Subheader
-                    const Text(
-                      "Organic structures in data visualization",
-                      style: TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold,
-                        fontFamily: 'Courier',
-                        color: Colors.white,
+                      decoration: InputDecoration(
+                        hintText: "Untitled.md",
+                        hintStyle: TextStyle(color: Colors.grey[700]),
+                        border: InputBorder.none,
+                        enabledBorder: UnderlineInputBorder(
+                          borderSide: BorderSide(
+                            color: Colors.grey.shade800,
+                            width: 1,
+                          ),
+                        ),
+                        focusedBorder: const UnderlineInputBorder(
+                          borderSide: BorderSide(
+                            color: Colors.yellowAccent,
+                            width: 2,
+                          ),
+                        ),
                       ),
                     ),
-                    const SizedBox(height: 15),
+                  ),
 
-                    // Paragraph text
-                    RichText(
-                      text: const TextSpan(
-                        style: TextStyle(
+                  // 2. THE BODY
+                  Expanded(
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 40),
+                      child: TextField(
+                        controller: _bodyController,
+                        maxLines: null,
+                        expands: true,
+                        keyboardType: TextInputType.multiline,
+                        cursorColor: Colors.white,
+
+                        // --- VISUAL FIX IS HERE ---
+                        style: const TextStyle(
                           fontSize: 16,
-                          height: 1.6,
+                          // Changed from 1.6 to 1.25.
+                          // This closes the gaps so the background looks like a solid block.
+                          height: 1.25,
                           color: Colors.grey,
-                          fontFamily: 'sans-serif',
+                          fontFamily: 'Courier',
                         ),
-                        children: [
-                          TextSpan(
-                            text:
-                                "The visualization of complex networks often benefits from ",
-                          ),
-                          TextSpan(
-                            text: "`organic algorithms`", // Inline code style
-                            style: TextStyle(
-                              color: Colors.yellowAccent,
-                              backgroundColor: Color(0xFF2D2D2D),
-                              fontFamily: 'Courier',
-                            ),
-                          ),
-                          TextSpan(
-                            text:
-                                ". By simulating natural growth patterns, we can uncover clusters that strictly hierarchical layouts might obscure.",
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    const SizedBox(height: 30),
-
-                    // The "Observation" Box (Blockquote)
-                    Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF252526),
-                        border: Border(
-                          left: BorderSide(
-                            color: Colors.yellowAccent.withOpacity(0.8),
-                            width: 4,
-                          ),
+                        decoration: const InputDecoration(
+                          border: InputBorder.none,
+                          hintText: "Start typing...",
                         ),
                       ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            "OBSERVATION",
-                            style: TextStyle(
-                              color: Colors.yellowAccent.withOpacity(0.8),
-                              fontWeight: FontWeight.bold,
-                              fontSize: 12,
-                              letterSpacing: 1,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          const Text(
-                            "The node density increases towards the upper right quadrant, suggesting a strong correlation between the Umbel structures and the temporal data points collected in Q3.",
-                            style: TextStyle(color: Colors.grey, fontSize: 14),
-                          ),
-                        ],
-                      ),
                     ),
-
-                    const SizedBox(height: 50),
-                    // Just a visual end marker to show where the note ends
-                    Center(
-                      child: Icon(Icons.more_horiz, color: Colors.grey[800]),
-                    ),
-                  ],
-                ),
+                  ),
+                ],
               ),
 
-              // Hamburger Menu (Top Right)
+              // Hamburger Menu
               Positioned(
                 top: 20,
                 right: 20,
@@ -138,7 +122,7 @@ class RightSidebar extends StatelessWidget {
           ),
         ),
 
-        // --- 2. BOTTOM TABS ---
+        // --- BOTTOM TABS ---
         Container(
           height: 35,
           decoration: BoxDecoration(
@@ -149,7 +133,6 @@ class RightSidebar extends StatelessWidget {
             children: [
               _bottomTab("Project_Botanical", isActive: true),
               _bottomTab("research_notes_v2", isActive: false),
-              _bottomTab("Canva: Q4 Goals", isActive: false),
               Container(
                 width: 35,
                 alignment: Alignment.center,
@@ -197,5 +180,58 @@ class RightSidebar extends StatelessWidget {
         ],
       ),
     );
+  }
+}
+
+// --- LOGIC ENGINE ---
+class SyntaxHighlightingController extends TextEditingController {
+  SyntaxHighlightingController({String? text}) : super(text: text);
+
+  @override
+  TextSpan buildTextSpan({
+    required BuildContext context,
+    TextStyle? style,
+    required bool withComposing,
+  }) {
+    final List<TextSpan> children = [];
+
+    // Regex that catches quotes across multiple lines
+    final RegExp pattern = RegExp(r"(['\x22])(?:(?!\1)[\s\S])*\1");
+
+    String currentText = text;
+    int currentIndex = 0;
+
+    for (final Match match in pattern.allMatches(currentText)) {
+      if (match.start > currentIndex) {
+        children.add(
+          TextSpan(
+            text: currentText.substring(currentIndex, match.start),
+            style: style,
+          ),
+        );
+      }
+
+      children.add(
+        TextSpan(
+          text: currentText.substring(match.start, match.end),
+          style: style?.copyWith(
+            color: Colors.yellowAccent,
+            // Using a slightly more opaque background helps blend the lines
+            backgroundColor: Colors.white.withOpacity(0.12),
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      );
+
+      currentIndex = match.end;
+    }
+
+    if (currentIndex < currentText.length) {
+      children.add(
+        TextSpan(text: currentText.substring(currentIndex), style: style),
+      );
+    }
+
+    return TextSpan(style: style, children: children);
   }
 }
