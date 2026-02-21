@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
 
 class RightSidebar extends StatefulWidget {
-  const RightSidebar({super.key});
+  //accepts data from parent
+  final String content;
+  final String title;
+
+  const RightSidebar({super.key, required this.content, required this.title});
 
   @override
   State<RightSidebar> createState() => _RightSidebarState();
@@ -9,9 +13,7 @@ class RightSidebar extends StatefulWidget {
 
 class _RightSidebarState extends State<RightSidebar> {
   //header
-  final TextEditingController _headerController = TextEditingController(
-    text: "Project",
-  );
+  late TextEditingController _headerController;
 
   //the body will use custom widget
   late SyntaxHighLightingController _bodyController;
@@ -19,18 +21,22 @@ class _RightSidebarState extends State<RightSidebar> {
   @override
   void initState() {
     super.initState();
-    String initialText = """
-    The visualization of complex networks often benefits from 'organic algorithms'. 
+    //initialize with data sent from parent
+    _headerController = TextEditingController(text: widget.title);
+    _bodyController = SyntaxHighLightingController(text: widget.content);
+  }
 
-    By simulating natural growth patterns, we can uncover clusters that strictly hierarchical layouts might obscure.
-
-    "OBSERVATION
-    The node density increases towards the upper right quadrant
-    and this sentence spans multiple lines safely."
-
-    The end.""";
-
-    _bodyController = SyntaxHighLightingController(text: initialText);
+  //when the user clicks a new file in sidebar, the parent sends new widget.content.
+  @override
+  void didUpdateWidget(covariant RightSidebar oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.content != widget.content ||
+        oldWidget.title != widget.title) {
+      _headerController.text = widget.title;
+      _bodyController.text = widget.content;
+      //move cursor to start
+      _bodyController.selection = const TextSelection.collapsed(offset: 0);
+    }
   }
 
   @override
