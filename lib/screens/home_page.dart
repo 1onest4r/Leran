@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import '../widgets/left_sidebar.dart';
 import '../widgets/right_sidebar.dart';
+import '../widgets/left_sidebar.dart';
 
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
@@ -11,12 +11,12 @@ class HomePage extends StatelessWidget {
       body: SafeArea(
         child: Row(
           children: [
-            //left side column(2 parts width)
             const Expanded(flex: 2, child: LeftSidebar()),
+            // A subtle dark green divider
             const VerticalDivider(
               width: 1,
               thickness: 1,
-              color: Color.fromARGB(255, 61, 61, 61),
+              color: Color.fromARGB(255, 66, 66, 66),
             ),
             const Expanded(flex: 6, child: RightSidebar()),
           ],

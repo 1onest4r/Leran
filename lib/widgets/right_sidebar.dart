@@ -4,47 +4,55 @@ class RightSidebar extends StatefulWidget {
   const RightSidebar({super.key});
 
   @override
-  State<RightSidebar> createState() => _RightSectionState();
+  State<RightSidebar> createState() => _RightSidebarState();
 }
 
-class _RightSectionState extends State<RightSidebar> {
-  final TextEditingController _titleController = TextEditingController(
-    text: "Project_Botanical.md",
+class _RightSidebarState extends State<RightSidebar> {
+  //header
+  final TextEditingController _headerController = TextEditingController(
+    text: "Project",
   );
-  late SyntaxHighlightingController _bodyController;
+
+  //the body will use custom widget
+  late SyntaxHighLightingController _bodyController;
 
   @override
   void initState() {
     super.initState();
-    String initialText =
-        """The visualization of complex networks often benefits from 'organic algorithms'. 
+    String initialText = """
+    The visualization of complex networks often benefits from 'organic algorithms'. 
 
-By simulating natural growth patterns, we can uncover clusters that strictly hierarchical layouts might obscure.
+    By simulating natural growth patterns, we can uncover clusters that strictly hierarchical layouts might obscure.
 
-"OBSERVATION
-The node density increases towards the upper right quadrant
-and this sentence spans multiple lines safely."
+    "OBSERVATION
+    The node density increases towards the upper right quadrant
+    and this sentence spans multiple lines safely."
 
-The end.""";
+    The end.""";
 
-    _bodyController = SyntaxHighlightingController(text: initialText);
+    _bodyController = SyntaxHighLightingController(text: initialText);
   }
 
   @override
   Widget build(BuildContext context) {
+    const Color bgDark = Color(0xFF1E1E1E);
+    const Color accentYellow = Colors.yellowAccent;
+    const Color borderColor = Color(0xFF424242);
+
     return Column(
       children: [
-        // --- MAIN EDITING AREA ---
+        //the editor
         Expanded(
           child: Stack(
             children: [
+              //header + body
               Column(
                 children: [
-                  // 1. THE HEADER
                   Container(
+                    //paddinig to avoid hamburger menu
                     padding: const EdgeInsets.fromLTRB(40, 40, 80, 10),
                     child: TextField(
-                      controller: _titleController,
+                      controller: _headerController,
                       cursorColor: Colors.white,
                       style: const TextStyle(
                         fontSize: 32,
@@ -55,39 +63,31 @@ The end.""";
                       decoration: InputDecoration(
                         hintText: "Untitled.md",
                         hintStyle: TextStyle(color: Colors.grey[700]),
-                        border: InputBorder.none,
-                        enabledBorder: UnderlineInputBorder(
-                          borderSide: BorderSide(
-                            color: Colors.grey.shade800,
-                            width: 1,
-                          ),
+                        // border: InputBorder.none,
+                        enabledBorder: const UnderlineInputBorder(
+                          borderSide: BorderSide(color: borderColor, width: 1),
                         ),
                         focusedBorder: const UnderlineInputBorder(
-                          borderSide: BorderSide(
-                            color: Colors.yellowAccent,
-                            width: 2,
-                          ),
+                          borderSide: BorderSide(color: accentYellow, width: 2),
                         ),
                       ),
                     ),
                   ),
 
-                  // 2. THE BODY
+                  //the note taking section
                   Expanded(
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 40),
                       child: TextField(
-                        controller: _bodyController,
+                        controller: _bodyController, // the custom widget
                         maxLines: null,
                         expands: true,
                         keyboardType: TextInputType.multiline,
                         cursorColor: Colors.white,
 
-                        // --- VISUAL FIX IS HERE ---
+                        //ux
                         style: const TextStyle(
                           fontSize: 16,
-                          // Changed from 1.6 to 1.25.
-                          // This closes the gaps so the background looks like a solid block.
                           height: 1.25,
                           color: Colors.grey,
                           fontFamily: 'Courier',
@@ -102,19 +102,27 @@ The end.""";
                 ],
               ),
 
-              // Hamburger Menu
+              //the hamburger
               Positioned(
                 top: 20,
                 right: 20,
                 child: Container(
                   decoration: BoxDecoration(
                     color: const Color(0xFF2D2D2D),
-                    borderRadius: BorderRadius.circular(4),
+                    borderRadius: BorderRadius.circular(40),
                     border: Border.all(color: Colors.grey.shade700),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.3),
+                        blurRadius: 4,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
                   ),
                   child: IconButton(
-                    icon: const Icon(Icons.menu, color: Colors.white),
                     onPressed: () {},
+                    icon: const Icon(Icons.menu, color: Colors.white),
+                    splashRadius: 20,
                   ),
                 ),
               ),
@@ -122,21 +130,29 @@ The end.""";
           ),
         ),
 
-        // --- BOTTOM TABS ---
         Container(
-          height: 35,
-          decoration: BoxDecoration(
-            color: const Color(0xFF1E1E1E),
-            border: Border(top: BorderSide(color: Colors.grey.shade800)),
+          height: 36,
+          decoration: const BoxDecoration(
+            color: bgDark,
+            border: Border(top: BorderSide(color: borderColor)),
           ),
           child: Row(
             children: [
-              _bottomTab("Project_Botanical", isActive: true),
-              _bottomTab("research_notes_v2", isActive: false),
-              Container(
-                width: 35,
-                alignment: Alignment.center,
-                child: const Icon(Icons.add, size: 16, color: Colors.grey),
+              _bottomTab("Project", isActive: false, accentColor: accentYellow),
+              _bottomTab(
+                "Research_notes_v2",
+                isActive: false,
+                accentColor: accentYellow,
+              ),
+              _bottomTab(
+                "Something",
+                isActive: false,
+                accentColor: accentYellow,
+              ),
+              _bottomTab(
+                "Placeholder",
+                isActive: false,
+                accentColor: accentYellow,
               ),
             ],
           ),
@@ -145,16 +161,21 @@ The end.""";
     );
   }
 
-  Widget _bottomTab(String text, {required bool isActive}) {
+  Widget _bottomTab(
+    String text, {
+    required bool isActive,
+    required Color accentColor,
+  }) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 15),
       alignment: Alignment.center,
       decoration: BoxDecoration(
+        //active tabs get slightly lighter background
         color: isActive ? const Color(0xFF252526) : Colors.transparent,
         border: Border(
-          right: BorderSide(color: Colors.grey.shade800, width: 0.5),
+          right: const BorderSide(color: Color(0xFF424242), width: 0.5),
           top: isActive
-              ? const BorderSide(color: Colors.yellowAccent, width: 2)
+              ? BorderSide(color: accentColor, width: 2)
               : BorderSide.none,
         ),
       ),
@@ -163,7 +184,7 @@ The end.""";
           Icon(
             Icons.description_outlined,
             size: 14,
-            color: isActive ? Colors.yellowAccent : Colors.grey,
+            color: isActive ? accentColor : Colors.grey,
           ),
           const SizedBox(width: 8),
           Text(
@@ -183,9 +204,8 @@ The end.""";
   }
 }
 
-// --- LOGIC ENGINE ---
-class SyntaxHighlightingController extends TextEditingController {
-  SyntaxHighlightingController({String? text}) : super(text: text);
+class SyntaxHighLightingController extends TextEditingController {
+  SyntaxHighLightingController({String? text}) : super(text: text);
 
   @override
   TextSpan buildTextSpan({
@@ -195,13 +215,16 @@ class SyntaxHighlightingController extends TextEditingController {
   }) {
     final List<TextSpan> children = [];
 
-    // Regex that catches quotes across multiple lines
+    //finds text between " or ' quotes
+    //[\s\S] means any character including new lines
     final RegExp pattern = RegExp(r"(['\x22])(?:(?!\1)[\s\S])*\1");
 
     String currentText = text;
     int currentIndex = 0;
 
+    //scan the text for matches
     for (final Match match in pattern.allMatches(currentText)) {
+      //add normal text (grey)
       if (match.start > currentIndex) {
         children.add(
           TextSpan(
@@ -211,13 +234,14 @@ class SyntaxHighlightingController extends TextEditingController {
         );
       }
 
+      //add highlighted text (yellow)
       children.add(
         TextSpan(
           text: currentText.substring(match.start, match.end),
           style: style?.copyWith(
             color: Colors.yellowAccent,
-            // Using a slightly more opaque background helps blend the lines
-            backgroundColor: Colors.white.withOpacity(0.12),
+            //low opacity white for background
+            backgroundColor: Colors.white.withValues(alpha: 0.12),
             fontWeight: FontWeight.bold,
           ),
         ),
