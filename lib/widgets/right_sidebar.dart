@@ -1,40 +1,47 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 
 class RightSidebar extends StatefulWidget {
-  //accepts data from parent
-  final String content;
   final String title;
+  final String content;
+  // 1. New Variables for Tab Management
+  final List<FileSystemEntity> openedTabs;
+  final FileSystemEntity activeTab;
+  final Function(FileSystemEntity) onTabSelected;
+  final Function(FileSystemEntity) onTabClosed;
 
-  const RightSidebar({super.key, required this.content, required this.title});
+  const RightSidebar({
+    super.key,
+    required this.title,
+    required this.content,
+    required this.openedTabs,
+    required this.activeTab,
+    required this.onTabSelected,
+    required this.onTabClosed,
+  });
 
   @override
-  State<RightSidebar> createState() => _RightSidebarState();
+  State<RightSidebar> createState() => _RightSectionState();
 }
 
-class _RightSidebarState extends State<RightSidebar> {
-  //header
+class _RightSectionState extends State<RightSidebar> {
   late TextEditingController _headerController;
-
-  //the body will use custom widget
-  late SyntaxHighLightingController _bodyController;
+  late SyntaxHighlightingController _bodyController;
 
   @override
   void initState() {
     super.initState();
-    //initialize with data sent from parent
     _headerController = TextEditingController(text: widget.title);
-    _bodyController = SyntaxHighLightingController(text: widget.content);
+    _bodyController = SyntaxHighlightingController(text: widget.content);
   }
 
-  //when the user clicks a new file in sidebar, the parent sends new widget.content.
   @override
   void didUpdateWidget(covariant RightSidebar oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.content != widget.content ||
-        oldWidget.title != widget.title) {
+    // If the active file changed, update the text fields
+    if (oldWidget.activeTab.path != widget.activeTab.path) {
       _headerController.text = widget.title;
       _bodyController.text = widget.content;
-      //move cursor to start
       _bodyController.selection = const TextSelection.collapsed(offset: 0);
     }
   }
@@ -42,20 +49,19 @@ class _RightSidebarState extends State<RightSidebar> {
   @override
   Widget build(BuildContext context) {
     const Color bgDark = Color(0xFF1E1E1E);
-    const Color accentYellow = Colors.yellowAccent;
+    const Color accentGreen = Color(0xFF52CB8B);
     const Color borderColor = Color(0xFF424242);
 
     return Column(
       children: [
-        //the editor
+        // --- EDITOR AREA ---
         Expanded(
           child: Stack(
             children: [
-              //header + body
               Column(
                 children: [
+                  // HEADER
                   Container(
-                    //paddinig to avoid hamburger menu
                     padding: const EdgeInsets.fromLTRB(40, 40, 80, 10),
                     child: TextField(
                       controller: _headerController,
@@ -69,29 +75,27 @@ class _RightSidebarState extends State<RightSidebar> {
                       decoration: InputDecoration(
                         hintText: "Untitled.md",
                         hintStyle: TextStyle(color: Colors.grey[700]),
-                        // border: InputBorder.none,
+                        border: InputBorder.none,
                         enabledBorder: const UnderlineInputBorder(
                           borderSide: BorderSide(color: borderColor, width: 1),
                         ),
                         focusedBorder: const UnderlineInputBorder(
-                          borderSide: BorderSide(color: accentYellow, width: 2),
+                          borderSide: BorderSide(color: accentGreen, width: 2),
                         ),
                       ),
                     ),
                   ),
 
-                  //the note taking section
+                  // BODY
                   Expanded(
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 40),
                       child: TextField(
-                        controller: _bodyController, // the custom widget
+                        controller: _bodyController,
                         maxLines: null,
                         expands: true,
                         keyboardType: TextInputType.multiline,
                         cursorColor: Colors.white,
-
-                        //ux
                         style: const TextStyle(
                           fontSize: 16,
                           height: 1.25,
@@ -107,112 +111,101 @@ class _RightSidebarState extends State<RightSidebar> {
                   ),
                 ],
               ),
-
-              //the hamburger
+              // Menu Button
               Positioned(
                 top: 20,
                 right: 20,
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF2D2D2D),
-                    borderRadius: BorderRadius.circular(40),
-                    border: Border.all(color: Colors.grey.shade700),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.3),
-                        blurRadius: 4,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: IconButton(
-                    onPressed: () {},
-                    icon: const Icon(Icons.menu, color: Colors.white),
-                    splashRadius: 20,
-                  ),
+                child: IconButton(
+                  icon: const Icon(Icons.menu, color: Colors.white),
+                  onPressed: () {},
                 ),
               ),
             ],
           ),
         ),
 
+        // --- DYNAMIC BOTTOM TABS ---
         Container(
           height: 36,
+          width: double.infinity, // Ensure it takes full width
           decoration: const BoxDecoration(
             color: bgDark,
             border: Border(top: BorderSide(color: borderColor)),
           ),
-          child: Row(
-            children: [
-              _bottomTab("Project", isActive: false, accentColor: accentYellow),
-              _bottomTab(
-                "Research_notes_v2",
-                isActive: false,
-                accentColor: accentYellow,
-              ),
-              _bottomTab(
-                "Something",
-                isActive: false,
-                accentColor: accentYellow,
-              ),
-              _bottomTab(
-                "Placeholder",
-                isActive: false,
-                accentColor: accentYellow,
-              ),
-            ],
+          // We use ListView for horizontal scrolling if many tabs are open
+          child: ListView.builder(
+            scrollDirection: Axis.horizontal,
+            itemCount: widget.openedTabs.length,
+            itemBuilder: (context, index) {
+              final file = widget.openedTabs[index];
+              // Calculate filename from path
+              final fileName = file.uri.pathSegments.lastWhere(
+                (s) => s.isNotEmpty,
+              );
+              final isActive = file.path == widget.activeTab.path;
+
+              return InkWell(
+                onTap: () => widget.onTabSelected(file),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 15),
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: isActive
+                        ? const Color(0xFF252526)
+                        : Colors.transparent,
+                    border: Border(
+                      right: const BorderSide(color: borderColor, width: 0.5),
+                      // The Active Green Top Border
+                      top: isActive
+                          ? const BorderSide(color: accentGreen, width: 2)
+                          : BorderSide.none,
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.description_outlined,
+                        size: 14,
+                        color: isActive ? accentGreen : Colors.grey,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        fileName,
+                        style: TextStyle(
+                          color: isActive ? Colors.white : Colors.grey,
+                          fontSize: 12,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      // The Close Button (X)
+                      InkWell(
+                        onTap: () {
+                          // Prevent bubbling up to the tab click
+                          widget.onTabClosed(file);
+                        },
+                        borderRadius: BorderRadius.circular(10),
+                        child: Icon(
+                          Icons.close,
+                          size: 14,
+                          // Highlight X when active, dim when inactive
+                          color: isActive ? Colors.white : Colors.transparent,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
           ),
         ),
       ],
     );
   }
-
-  Widget _bottomTab(
-    String text, {
-    required bool isActive,
-    required Color accentColor,
-  }) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 15),
-      alignment: Alignment.center,
-      decoration: BoxDecoration(
-        //active tabs get slightly lighter background
-        color: isActive ? const Color(0xFF252526) : Colors.transparent,
-        border: Border(
-          right: const BorderSide(color: Color(0xFF424242), width: 0.5),
-          top: isActive
-              ? BorderSide(color: accentColor, width: 2)
-              : BorderSide.none,
-        ),
-      ),
-      child: Row(
-        children: [
-          Icon(
-            Icons.description_outlined,
-            size: 14,
-            color: isActive ? accentColor : Colors.grey,
-          ),
-          const SizedBox(width: 8),
-          Text(
-            text,
-            style: TextStyle(
-              color: isActive ? Colors.white : Colors.grey,
-              fontSize: 12,
-            ),
-          ),
-          if (isActive) ...[
-            const SizedBox(width: 8),
-            const Icon(Icons.close, size: 12, color: Colors.white),
-          ],
-        ],
-      ),
-    );
-  }
 }
 
-class SyntaxHighLightingController extends TextEditingController {
-  SyntaxHighLightingController({String? text}) : super(text: text);
-
+// Keep your SyntaxHighlightingController class at the bottom...
+class SyntaxHighlightingController extends TextEditingController {
+  SyntaxHighlightingController({String? text}) : super(text: text);
   @override
   TextSpan buildTextSpan({
     required BuildContext context,
@@ -220,17 +213,10 @@ class SyntaxHighLightingController extends TextEditingController {
     required bool withComposing,
   }) {
     final List<TextSpan> children = [];
-
-    //finds text between " or ' quotes
-    //[\s\S] means any character including new lines
     final RegExp pattern = RegExp(r"(['\x22])(?:(?!\1)[\s\S])*\1");
-
     String currentText = text;
     int currentIndex = 0;
-
-    //scan the text for matches
     for (final Match match in pattern.allMatches(currentText)) {
-      //add normal text (grey)
       if (match.start > currentIndex) {
         children.add(
           TextSpan(
@@ -239,29 +225,23 @@ class SyntaxHighLightingController extends TextEditingController {
           ),
         );
       }
-
-      //add highlighted text (yellow)
       children.add(
         TextSpan(
           text: currentText.substring(match.start, match.end),
           style: style?.copyWith(
-            color: Colors.yellowAccent,
-            //low opacity white for background
-            backgroundColor: Colors.white.withValues(alpha: 0.12),
+            color: const Color(0xFF52CB8B),
+            backgroundColor: Colors.white.withOpacity(0.12),
             fontWeight: FontWeight.bold,
           ),
         ),
       );
-
       currentIndex = match.end;
     }
-
     if (currentIndex < currentText.length) {
       children.add(
         TextSpan(text: currentText.substring(currentIndex), style: style),
       );
     }
-
     return TextSpan(style: style, children: children);
   }
 }

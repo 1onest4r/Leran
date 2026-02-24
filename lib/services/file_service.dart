@@ -1,27 +1,24 @@
 import 'dart:io';
 
 class FileService {
-  // 1. Load files from a SPECIFIC path provided by the user
-  static List<FileSystemEntity> getNotesFromPath(String directoryPath) {
+  // 1. Get List of Files
+  static Future<List<FileSystemEntity>> getNotesFromPath(
+    String directoryPath,
+  ) async {
     final dir = Directory(directoryPath);
+    if (!await dir.exists()) return [];
 
-    // If folder doesn't exist (rare since user just picked it), return empty
-    if (!dir.existsSync()) {
-      return [];
-    }
+    final List<FileSystemEntity> files = dir.listSync();
 
-    // Get files and filter for .md or .txt
-    List<FileSystemEntity> files = dir.listSync();
-
-    files.sort((a, b) => a.path.compareTo(b.path));
+    // Sort files alphabetically so they don't jump around
+    files.sort((a, b) => a.path.toLowerCase().compareTo(b.path.toLowerCase()));
 
     return files.where((file) {
-      // Only show text files
       return file.path.endsWith(".md") || file.path.endsWith(".txt");
     }).toList();
   }
 
-  // 2. Read the content of a specific file
+  // 2. Read File
   static Future<String> readFile(FileSystemEntity file) async {
     try {
       final File targetFile = File(file.path);
@@ -31,18 +28,28 @@ class FileService {
     }
   }
 
-  //create a file
+  // 3. Create File
   static Future<void> createNote(String directoryPath, String fileName) async {
     if (!fileName.endsWith('.md') && !fileName.endsWith('.txt')) {
       fileName = '$fileName.md';
     }
-
-    final path = '$directoryPath/$fileName';
+    final path = '$directoryPath${Platform.pathSeparator}$fileName';
     final file = File(path);
 
-    //dont overwrite if exists
     if (!await file.exists()) {
       await file.writeAsString("# $fileName\nCreated on ${DateTime.now()}");
     }
+  }
+
+  // 4. Rename Directory (The missing method causing your error)
+  static Future<String> renameDirectory(String oldPath, String newName) async {
+    final dir = Directory(oldPath);
+    // Get the parent folder (e.g. C:/Users/Docs)
+    final parentPath = dir.parent.path;
+    // Make new path (e.g. C:/Users/Docs/NewName)
+    final newPath = '$parentPath${Platform.pathSeparator}$newName';
+
+    await dir.rename(newPath);
+    return newPath;
   }
 }
