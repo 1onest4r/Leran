@@ -8,7 +8,12 @@ used external packages:
 
 TODO:
 -fix extension issue on the left sidebar
+
 -enable a feature where it asks for permission from user
+
 -in note taking section add a feature for headers, line breaker,
- and copying stylized text cleanly
+and copying stylized text cleanly
+
 -pick a proper color for better UX
+
+-add option for note taking section to able to increase the size of fonts
