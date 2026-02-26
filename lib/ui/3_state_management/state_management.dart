@@ -20,8 +20,12 @@ class _StateManagementState extends State<StateManagement> {
     Colors.lightGreenAccent,
     Colors.limeAccent,
   ];
-  int colorIndex = 0;
-  int number = 0;
+  //int colorIndex = 0;
+
+  //int number = 0;
+  final colorIndexNotifier = ValueNotifier(0);
+
+  final numberNotifier = ValueNotifier<int>(0);
 
   @override
   Widget build(BuildContext context) {
@@ -31,20 +35,33 @@ class _StateManagementState extends State<StateManagement> {
         child: Column(
           children: [
             const SizedBox(height: 20.0),
-            Container(
-              color: boxColor[colorIndex],
-              width: 200,
-              height: 200,
-              child: Stack(
-                children: [
-                  Center(
-                    child: Text(
-                      '$number',
-                      style: TextStyle(fontSize: 60.0, fontFamily: 'Courier'),
-                    ),
+            ValueListenableBuilder(
+              valueListenable: colorIndexNotifier,
+              builder: (context, colorIndex, child) {
+                return Container(
+                  color: boxColor[colorIndex],
+                  width: 200,
+                  height: 200,
+                  child: Stack(
+                    children: [
+                      Center(
+                        child: ValueListenableBuilder(
+                          valueListenable: numberNotifier,
+                          builder: (context, number, child) {
+                            return Text(
+                              '$number',
+                              style: TextStyle(
+                                fontSize: 60.0,
+                                fontFamily: 'Courier',
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    ],
                   ),
-                ],
-              ),
+                );
+              },
             ),
             const SizedBox(height: 20.0),
             OutlinedButton(
@@ -68,15 +85,11 @@ class _StateManagementState extends State<StateManagement> {
 
   void _changeColor() {
     //rebuilds the whole ui
-    setState(() {
-      colorIndex++;
-      colorIndex = colorIndex % 10;
-    });
+    colorIndexNotifier.value++;
+    colorIndexNotifier.value = colorIndexNotifier.value % 10;
   }
 
   void _changeText() {
-    setState(() {
-      number++;
-    });
+    numberNotifier.value++;
   }
 }
