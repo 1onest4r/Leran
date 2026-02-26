@@ -10,6 +10,8 @@ used external packages:
 
 TODO:
 
+-building ui must be faster than 16ms
+
 -make the cycling the tabs functional
 
 -add into the settings option for selection a new folder
