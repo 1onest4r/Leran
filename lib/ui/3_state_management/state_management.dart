@@ -21,6 +21,7 @@ class _StateManagementState extends State<StateManagement> {
     Colors.limeAccent,
   ];
   int colorIndex = 0;
+  int number = 0;
 
   @override
   Widget build(BuildContext context) {
@@ -38,8 +39,8 @@ class _StateManagementState extends State<StateManagement> {
                 children: [
                   Center(
                     child: Text(
-                      "Hello",
-                      style: TextStyle(fontSize: 30.0, fontFamily: 'Courier'),
+                      '$number',
+                      style: TextStyle(fontSize: 60.0, fontFamily: 'Courier'),
                     ),
                   ),
                 ],
@@ -53,7 +54,12 @@ class _StateManagementState extends State<StateManagement> {
               child: Text("Change color"),
             ),
             const SizedBox(height: 20.0),
-            OutlinedButton(onPressed: () {}, child: Text("Change Text")),
+            OutlinedButton(
+              onPressed: () {
+                _changeText();
+              },
+              child: Text("Change Text"),
+            ),
           ],
         ),
       ),
@@ -65,6 +71,12 @@ class _StateManagementState extends State<StateManagement> {
     setState(() {
       colorIndex++;
       colorIndex = colorIndex % 10;
+    });
+  }
+
+  void _changeText() {
+    setState(() {
+      number++;
     });
   }
 }
