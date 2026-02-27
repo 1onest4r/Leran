@@ -9,6 +9,7 @@ used external packages:
 -file_picker ^10.3.10
 
 TODO:
+fix the saving issue where save button doesn't work and only saving highlighted stuff when cycling
 fix the ui scaling issue in the settings
 change the font size option to numbering system
 add into the settings option for selection a new folder
