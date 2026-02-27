@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
+import '../services/settings_service.dart';
 
 class LeftSidebar extends StatefulWidget {
   final List<FileSystemEntity> files;
@@ -9,6 +10,8 @@ class LeftSidebar extends StatefulWidget {
   final VoidCallback onNewNote;
   final String selectedDirectory;
   final Function(String) onFolderRename;
+  final VoidCallback onSearchClick;
+  final VoidCallback onSettingsClick;
 
   const LeftSidebar({
     super.key,
@@ -18,6 +21,8 @@ class LeftSidebar extends StatefulWidget {
     required this.onNewNote,
     required this.selectedDirectory,
     required this.onFolderRename,
+    required this.onSearchClick,
+    required this.onSettingsClick,
   });
 
   @override
@@ -62,51 +67,75 @@ class _LeftSidebarState extends State<LeftSidebar> {
     final TextEditingController controller = TextEditingController(
       text: currentName,
     );
+    final RegExp invalidChars = RegExp(r'[<>:"/\\|?*]');
+    final settings = SettingsService();
 
     showDialog(
       context: context,
       builder: (context) {
-        return AlertDialog(
-          backgroundColor: const Color(0xFF252526),
-          title: const Text(
-            "Rename Vault",
-            style: TextStyle(color: Colors.white),
-          ),
-          content: TextField(
-            controller: controller,
-            autofocus: true,
-            style: const TextStyle(color: Colors.white),
-            cursorColor: const Color(0xFF52CB8B),
-            decoration: const InputDecoration(
-              hintText: "Enter new folder name",
-              hintStyle: TextStyle(color: Colors.grey),
-              enabledBorder: UnderlineInputBorder(
-                borderSide: BorderSide(color: Colors.grey),
+        String? errorText;
+        return StatefulBuilder(
+          builder: (context, setState) {
+            void submit() {
+              final text = controller.text.trim();
+              if (text.isEmpty) return;
+              if (invalidChars.hasMatch(text)) {
+                setState(() => errorText = 'Invalid characters');
+                return;
+              }
+              if (text != currentName) {
+                widget.onFolderRename(text);
+                Navigator.pop(context);
+              } else {
+                Navigator.pop(context);
+              }
+            }
+
+            return AlertDialog(
+              backgroundColor: settings.sidebarColor,
+              title: Text(
+                "Rename Vault",
+                style: TextStyle(color: settings.textColor),
               ),
-              focusedBorder: UnderlineInputBorder(
-                borderSide: BorderSide(color: Color(0xFF52CB8B)),
+              content: TextField(
+                controller: controller,
+                autofocus: true,
+                onSubmitted: (_) => submit(),
+                onChanged: (_) {
+                  if (errorText != null) setState(() => errorText = null);
+                },
+                style: TextStyle(color: settings.textColor),
+                cursorColor: settings.accentColor,
+                decoration: InputDecoration(
+                  hintText: "Enter new folder name",
+                  hintStyle: TextStyle(color: settings.dimTextColor),
+                  errorText: errorText,
+                  enabledBorder: UnderlineInputBorder(
+                    borderSide: BorderSide(color: settings.dimTextColor),
+                  ),
+                  focusedBorder: UnderlineInputBorder(
+                    borderSide: BorderSide(color: settings.accentColor),
+                  ),
+                ),
               ),
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text("Cancel", style: TextStyle(color: Colors.grey)),
-            ),
-            TextButton(
-              onPressed: () {
-                if (controller.text.isNotEmpty &&
-                    controller.text != currentName) {
-                  widget.onFolderRename(controller.text);
-                  Navigator.pop(context);
-                }
-              },
-              child: const Text(
-                "Rename",
-                style: TextStyle(color: Color(0xFF52CB8B)),
-              ),
-            ),
-          ],
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: Text(
+                    "Cancel",
+                    style: TextStyle(color: settings.dimTextColor),
+                  ),
+                ),
+                TextButton(
+                  onPressed: submit,
+                  child: Text(
+                    "Rename",
+                    style: TextStyle(color: settings.accentColor),
+                  ),
+                ),
+              ],
+            );
+          },
         );
       },
     );
@@ -114,13 +143,11 @@ class _LeftSidebarState extends State<LeftSidebar> {
 
   @override
   Widget build(BuildContext context) {
-    const Color bgDark = Color(0xFF252526);
-    const Color accentGreen = Color(0xFF52CB8B);
-    const Color textDim = Colors.white54;
-    const Color textActive = Colors.white;
+    // Access dynamic settings
+    final settings = SettingsService();
 
     return Container(
-      color: bgDark,
+      color: settings.sidebarColor,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -132,28 +159,33 @@ class _LeftSidebarState extends State<LeftSidebar> {
               children: [
                 _iconBtn(
                   Icons.add_box_outlined,
-                  accentGreen,
+                  settings.accentColor,
                   "New Note",
                   onTap: widget.onNewNote,
                 ),
-                _iconBtn(Icons.search, textDim, "Search", onTap: () {}),
+                _iconBtn(
+                  Icons.search,
+                  settings.dimTextColor,
+                  "Search",
+                  onTap: widget.onSearchClick,
+                ),
                 _iconBtn(
                   Icons.hub_outlined,
-                  textDim,
+                  settings.dimTextColor,
                   "Graph View",
                   onTap: () {},
                 ),
                 _iconBtn(
                   Icons.settings_outlined,
-                  textDim,
+                  settings.dimTextColor,
                   "Settings",
-                  onTap: () {},
+                  onTap: widget.onSettingsClick,
                 ),
               ],
             ),
           ),
 
-          Divider(color: Colors.grey[800], height: 1),
+          Divider(color: settings.dividerColor, height: 1),
 
           // --- FILE LIST ---
           Expanded(
@@ -165,7 +197,7 @@ class _LeftSidebarState extends State<LeftSidebar> {
                   child: Text(
                     "EXPLORER",
                     style: TextStyle(
-                      color: Colors.grey[500],
+                      color: settings.dimTextColor,
                       fontSize: 10,
                       fontWeight: FontWeight.bold,
                       letterSpacing: 1.5,
@@ -177,7 +209,10 @@ class _LeftSidebarState extends State<LeftSidebar> {
                       ? Center(
                           child: Text(
                             "Empty Folder",
-                            style: TextStyle(color: textDim, fontSize: 12),
+                            style: TextStyle(
+                              color: settings.dimTextColor,
+                              fontSize: 12,
+                            ),
                           ),
                         )
                       : ListView.builder(
@@ -192,7 +227,7 @@ class _LeftSidebarState extends State<LeftSidebar> {
 
                             return Container(
                               color: isActive
-                                  ? accentGreen.withOpacity(0.1)
+                                  ? settings.accentColor.withOpacity(0.1)
                                   : Colors.transparent,
                               child: ListTile(
                                 dense: true,
@@ -207,7 +242,9 @@ class _LeftSidebarState extends State<LeftSidebar> {
                                       ? Icons.edit_document
                                       : Icons.description_outlined,
                                   size: 16,
-                                  color: isActive ? accentGreen : textDim,
+                                  color: isActive
+                                      ? settings.accentColor
+                                      : settings.dimTextColor,
                                 ),
                                 title: Text(
                                   fileName,
@@ -216,7 +253,9 @@ class _LeftSidebarState extends State<LeftSidebar> {
                                   style: TextStyle(
                                     fontFamily: 'Courier',
                                     fontSize: 13,
-                                    color: isActive ? textActive : textDim,
+                                    color: isActive
+                                        ? settings.textColor
+                                        : settings.dimTextColor,
                                     fontWeight: isActive
                                         ? FontWeight.bold
                                         : FontWeight.normal,
@@ -232,23 +271,18 @@ class _LeftSidebarState extends State<LeftSidebar> {
             ),
           ),
 
-          Divider(color: Colors.grey[800], height: 1),
+          Divider(color: settings.dividerColor, height: 1),
 
           // --- LIVE FOOTER ---
           Container(
             height: 35,
             padding: const EdgeInsets.symmetric(horizontal: 12),
-            color: const Color(0xFF1E1E1E),
+            color: settings.scaffoldColor, // Match Main BG for contrast
             child: Row(
               children: [
-                const Icon(
-                  Icons.dns_outlined,
-                  size: 12,
-                  color: Color(0xFF52CB8B),
-                ),
+                Icon(Icons.dns_outlined, size: 12, color: settings.accentColor),
                 const SizedBox(width: 8),
 
-                // 1. FOLDER NAME (EXPANDED)
                 Expanded(
                   child: InkWell(
                     onTap: _showRenameDialog,
@@ -259,7 +293,7 @@ class _LeftSidebarState extends State<LeftSidebar> {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
-                          color: Colors.grey[500],
+                          color: settings.dimTextColor,
                           fontSize: 10,
                           fontWeight: FontWeight.bold,
                           letterSpacing: 1,
@@ -269,24 +303,24 @@ class _LeftSidebarState extends State<LeftSidebar> {
                   ),
                 ),
 
-                // I REMOVED THE SPACER() HERE - Expanded above handles the push
                 const SizedBox(width: 8),
 
-                // 2. SESSION TIMER
                 Container(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 6,
                     vertical: 2,
                   ),
                   decoration: BoxDecoration(
-                    color: Colors.black26,
+                    color: settings.isDarkMode
+                        ? Colors.black26
+                        : Colors.black12,
                     borderRadius: BorderRadius.circular(4),
                   ),
                   child: Text(
                     _formatDuration(_sessionDuration),
                     style: TextStyle(
                       fontFamily: 'Courier',
-                      color: textDim,
+                      color: settings.dimTextColor,
                       fontSize: 11,
                       fontWeight: FontWeight.bold,
                     ),

@@ -1,20 +1,32 @@
 import 'package:flutter/material.dart';
+import 'services/settings_service.dart';
 import 'screens/home_page.dart';
 
-void main() {
-  runApp(const Leran());
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await SettingsService().loadSettings();
+  runApp(const NoteApp());
 }
 
-class Leran extends StatelessWidget {
-  const Leran({super.key});
+class NoteApp extends StatelessWidget {
+  const NoteApp({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      title: "Leran note taking app",
-      theme: ThemeData.dark().copyWith(),
-      home: const HomePage(),
+    return AnimatedBuilder(
+      animation: SettingsService(),
+      builder: (context, child) {
+        // Theme is mostly handled manually in widgets via SettingsService,
+        // but we set the baseline here.
+        return MaterialApp(
+          debugShowCheckedModeBanner: false,
+          title: 'Digital Garden',
+          theme: SettingsService().isDarkMode
+              ? ThemeData.dark()
+              : ThemeData.light(),
+          home: const HomePage(),
+        );
+      },
     );
   }
 }

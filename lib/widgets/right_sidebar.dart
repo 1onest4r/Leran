@@ -1,14 +1,20 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import '../services/settings_service.dart';
 
 class RightSidebar extends StatefulWidget {
   final String title;
   final String content;
-  // 1. New Variables for Tab Management
   final List<FileSystemEntity> openedTabs;
   final FileSystemEntity activeTab;
+  final Set<String> unsavedPaths;
+
   final Function(FileSystemEntity) onTabSelected;
   final Function(FileSystemEntity) onTabClosed;
+  final Function(String) onContentChanged;
+  final VoidCallback onManualSave;
+  final Function() onDelete;
+  final Function(String) onRename;
 
   const RightSidebar({
     super.key,
@@ -16,15 +22,20 @@ class RightSidebar extends StatefulWidget {
     required this.content,
     required this.openedTabs,
     required this.activeTab,
+    required this.unsavedPaths,
     required this.onTabSelected,
     required this.onTabClosed,
+    required this.onContentChanged,
+    required this.onManualSave,
+    required this.onDelete,
+    required this.onRename,
   });
 
   @override
-  State<RightSidebar> createState() => _RightSectionState();
+  State<RightSidebar> createState() => _RightSidebarState();
 }
 
-class _RightSectionState extends State<RightSidebar> {
+class _RightSidebarState extends State<RightSidebar> {
   late TextEditingController _headerController;
   late SyntaxHighlightingController _bodyController;
 
@@ -38,23 +49,70 @@ class _RightSectionState extends State<RightSidebar> {
   @override
   void didUpdateWidget(covariant RightSidebar oldWidget) {
     super.didUpdateWidget(oldWidget);
-    // If the active file changed, update the text fields
     if (oldWidget.activeTab.path != widget.activeTab.path) {
       _headerController.text = widget.title;
       _bodyController.text = widget.content;
-      _bodyController.selection = const TextSelection.collapsed(offset: 0);
     }
+  }
+
+  void _showRenameDialog() {
+    final settings = SettingsService();
+    final controller = TextEditingController(text: widget.title);
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: settings.sidebarColor,
+        title: Text("Rename", style: TextStyle(color: settings.textColor)),
+        content: TextField(
+          controller: controller,
+          style: TextStyle(color: settings.textColor),
+          onSubmitted: (val) {
+            if (val.isNotEmpty) widget.onRename(val);
+            Navigator.pop(context);
+          },
+          decoration: InputDecoration(
+            focusedBorder: UnderlineInputBorder(
+              borderSide: BorderSide(color: settings.accentColor),
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(
+              "Cancel",
+              style: TextStyle(color: settings.dimTextColor),
+            ),
+          ),
+          TextButton(
+            onPressed: () {
+              if (controller.text.isNotEmpty) widget.onRename(controller.text);
+              Navigator.pop(context);
+            },
+            child: Text(
+              "Rename",
+              style: TextStyle(color: settings.accentColor),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    const Color bgDark = Color(0xFF1E1E1E);
-    const Color accentGreen = Color(0xFF52CB8B);
-    const Color borderColor = Color(0xFF424242);
+    final settings = SettingsService();
+
+    // Editor Font Style
+    final TextStyle editorStyle = TextStyle(
+      fontSize: settings.fontSize,
+      fontFamily: settings.fontFamily,
+      height: 1.25,
+      color: settings.isDarkMode ? Colors.grey[400] : Colors.black87,
+    );
 
     return Column(
       children: [
-        // --- EDITOR AREA ---
         Expanded(
           child: Stack(
             children: [
@@ -65,43 +123,43 @@ class _RightSectionState extends State<RightSidebar> {
                     padding: const EdgeInsets.fromLTRB(40, 40, 80, 10),
                     child: TextField(
                       controller: _headerController,
-                      cursorColor: Colors.white,
-                      style: const TextStyle(
+                      readOnly: true,
+                      onTap: _showRenameDialog,
+                      style: TextStyle(
                         fontSize: 32,
                         fontWeight: FontWeight.bold,
                         fontFamily: 'Courier',
-                        color: Colors.white,
+                        color: settings.textColor,
                       ),
                       decoration: InputDecoration(
-                        hintText: "Untitled.md",
-                        hintStyle: TextStyle(color: Colors.grey[700]),
                         border: InputBorder.none,
-                        enabledBorder: const UnderlineInputBorder(
-                          borderSide: BorderSide(color: borderColor, width: 1),
+                        enabledBorder: UnderlineInputBorder(
+                          borderSide: BorderSide(
+                            color: settings.dividerColor,
+                            width: 1,
+                          ),
                         ),
-                        focusedBorder: const UnderlineInputBorder(
-                          borderSide: BorderSide(color: accentGreen, width: 2),
+                        focusedBorder: UnderlineInputBorder(
+                          borderSide: BorderSide(
+                            color: settings.accentColor,
+                            width: 2,
+                          ),
                         ),
                       ),
                     ),
                   ),
-
                   // BODY
                   Expanded(
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 40),
                       child: TextField(
                         controller: _bodyController,
+                        onChanged: widget.onContentChanged,
+                        style: editorStyle,
                         maxLines: null,
                         expands: true,
                         keyboardType: TextInputType.multiline,
-                        cursorColor: Colors.white,
-                        style: const TextStyle(
-                          fontSize: 16,
-                          height: 1.25,
-                          color: Colors.grey,
-                          fontFamily: 'Courier',
-                        ),
+                        cursorColor: settings.textColor,
                         decoration: const InputDecoration(
                           border: InputBorder.none,
                           hintText: "Start typing...",
@@ -111,38 +169,79 @@ class _RightSectionState extends State<RightSidebar> {
                   ),
                 ],
               ),
-              // Menu Button
+              // HAMBURGER MENU
               Positioned(
                 top: 20,
                 right: 20,
-                child: IconButton(
-                  icon: const Icon(Icons.menu, color: Colors.white),
-                  onPressed: () {},
+                child: PopupMenuButton<String>(
+                  icon: Icon(Icons.menu, color: settings.textColor),
+                  color: settings.sidebarColor,
+                  onSelected: (val) {
+                    if (val == 'save') widget.onManualSave();
+                    if (val == 'rename') _showRenameDialog();
+                    if (val == 'delete') widget.onDelete();
+                  },
+                  itemBuilder: (context) => [
+                    PopupMenuItem(
+                      value: 'save',
+                      child: Row(
+                        children: [
+                          Icon(Icons.save, color: settings.accentColor),
+                          SizedBox(width: 8),
+                          Text(
+                            "Save",
+                            style: TextStyle(color: settings.textColor),
+                          ),
+                        ],
+                      ),
+                    ),
+                    PopupMenuItem(
+                      value: 'rename',
+                      child: Row(
+                        children: [
+                          Icon(Icons.edit, color: settings.textColor),
+                          SizedBox(width: 8),
+                          Text(
+                            "Rename",
+                            style: TextStyle(color: settings.textColor),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const PopupMenuItem(
+                      value: 'delete',
+                      child: Row(
+                        children: [
+                          Icon(Icons.delete, color: Colors.red),
+                          SizedBox(width: 8),
+                          Text("Delete", style: TextStyle(color: Colors.red)),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],
           ),
         ),
-
-        // --- DYNAMIC BOTTOM TABS ---
+        // BOTTOM TABS
         Container(
           height: 36,
-          width: double.infinity, // Ensure it takes full width
-          decoration: const BoxDecoration(
-            color: bgDark,
-            border: Border(top: BorderSide(color: borderColor)),
+          width: double.infinity,
+          decoration: BoxDecoration(
+            color: settings.sidebarColor,
+            border: Border(top: BorderSide(color: settings.dividerColor)),
           ),
-          // We use ListView for horizontal scrolling if many tabs are open
           child: ListView.builder(
             scrollDirection: Axis.horizontal,
             itemCount: widget.openedTabs.length,
             itemBuilder: (context, index) {
               final file = widget.openedTabs[index];
-              // Calculate filename from path
               final fileName = file.uri.pathSegments.lastWhere(
                 (s) => s.isNotEmpty,
               );
               final isActive = file.path == widget.activeTab.path;
+              final isUnsaved = widget.unsavedPaths.contains(file.path);
 
               return InkWell(
                 onTap: () => widget.onTabSelected(file),
@@ -151,46 +250,53 @@ class _RightSectionState extends State<RightSidebar> {
                   alignment: Alignment.center,
                   decoration: BoxDecoration(
                     color: isActive
-                        ? const Color(0xFF252526)
+                        ? settings.scaffoldColor
                         : Colors.transparent,
                     border: Border(
-                      right: const BorderSide(color: borderColor, width: 0.5),
-                      // The Active Green Top Border
+                      right: BorderSide(
+                        color: settings.dividerColor,
+                        width: 0.5,
+                      ),
                       top: isActive
-                          ? const BorderSide(color: accentGreen, width: 2)
+                          ? BorderSide(color: settings.accentColor, width: 2)
                           : BorderSide.none,
                     ),
                   ),
                   child: Row(
                     children: [
                       Icon(
-                        Icons.description_outlined,
+                        Icons.description,
                         size: 14,
-                        color: isActive ? accentGreen : Colors.grey,
+                        color: isActive ? settings.accentColor : Colors.grey,
                       ),
                       const SizedBox(width: 8),
                       Text(
                         fileName,
                         style: TextStyle(
-                          color: isActive ? Colors.white : Colors.grey,
+                          color: isActive ? settings.textColor : Colors.grey,
                           fontSize: 12,
                         ),
                       ),
                       const SizedBox(width: 8),
-                      // The Close Button (X)
-                      InkWell(
-                        onTap: () {
-                          // Prevent bubbling up to the tab click
-                          widget.onTabClosed(file);
-                        },
-                        borderRadius: BorderRadius.circular(10),
-                        child: Icon(
-                          Icons.close,
-                          size: 14,
-                          // Highlight X when active, dim when inactive
-                          color: isActive ? Colors.white : Colors.transparent,
-                        ),
-                      ),
+                      isUnsaved
+                          ? Container(
+                              width: 8,
+                              height: 8,
+                              decoration: BoxDecoration(
+                                color: settings.textColor,
+                                shape: BoxShape.circle,
+                              ),
+                            )
+                          : InkWell(
+                              onTap: () => widget.onTabClosed(file),
+                              child: Icon(
+                                Icons.close,
+                                size: 14,
+                                color: isActive
+                                    ? settings.textColor
+                                    : Colors.transparent,
+                              ),
+                            ),
                     ],
                   ),
                 ),
@@ -203,7 +309,6 @@ class _RightSectionState extends State<RightSidebar> {
   }
 }
 
-// Keep your SyntaxHighlightingController class at the bottom...
 class SyntaxHighlightingController extends TextEditingController {
   SyntaxHighlightingController({String? text}) : super(text: text);
   @override
@@ -217,14 +322,13 @@ class SyntaxHighlightingController extends TextEditingController {
     String currentText = text;
     int currentIndex = 0;
     for (final Match match in pattern.allMatches(currentText)) {
-      if (match.start > currentIndex) {
+      if (match.start > currentIndex)
         children.add(
           TextSpan(
             text: currentText.substring(currentIndex, match.start),
             style: style,
           ),
         );
-      }
       children.add(
         TextSpan(
           text: currentText.substring(match.start, match.end),
@@ -237,11 +341,10 @@ class SyntaxHighlightingController extends TextEditingController {
       );
       currentIndex = match.end;
     }
-    if (currentIndex < currentText.length) {
+    if (currentIndex < currentText.length)
       children.add(
         TextSpan(text: currentText.substring(currentIndex), style: style),
       );
-    }
     return TextSpan(style: style, children: children);
   }
 }

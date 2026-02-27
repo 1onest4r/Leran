@@ -37,7 +37,7 @@ class FileService {
     final file = File(path);
 
     if (!await file.exists()) {
-      await file.writeAsString("# $fileName\nCreated on ${DateTime.now()}");
+      await file.writeAsString("#Created on ${DateTime.now()}");
     }
   }
 

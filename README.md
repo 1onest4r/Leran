@@ -12,8 +12,6 @@ TODO:
 
 -building ui must be faster than 16ms
 
--make the cycling the tabs functional
-
 -add into the settings option for selection a new folder
 
 """=====things to add after done with making the home screen fully functional=====
@@ -32,5 +30,6 @@ and copying stylized text cleanly
 """
 
 -fix extension issue on the left sidebar (haven't found any issue to fix)
+-make the cycling the tabs functional(cycleable by command?)
 
 """
