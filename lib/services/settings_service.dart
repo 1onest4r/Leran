@@ -12,12 +12,14 @@ class SettingsService extends ChangeNotifier {
   bool _isDarkMode = true;
   bool _autoSave = false;
   double _fontSize = 16.0;
+  double _uiScale = 1.0; // NEW: UI Scaling
   String _fontFamily = 'Courier';
 
   // Getters
   bool get isDarkMode => _isDarkMode;
   bool get autoSave => _autoSave;
   double get fontSize => _fontSize;
+  double get uiScale => _uiScale;
   String get fontFamily => _fontFamily;
 
   // Colors based on Theme
@@ -28,13 +30,14 @@ class SettingsService extends ChangeNotifier {
   Color get textColor => _isDarkMode ? Colors.white : Colors.black87;
   Color get dimTextColor => _isDarkMode ? Colors.white54 : Colors.black54;
   Color get dividerColor => _isDarkMode ? Colors.grey[800]! : Colors.grey[300]!;
-  Color get accentColor => const Color(0xFF52CB8B); // Brand color
+  Color get accentColor => const Color(0xFF52CB8B);
 
   Future<void> loadSettings() async {
     _prefs = await SharedPreferences.getInstance();
     _isDarkMode = _prefs.getBool('isDarkMode') ?? true;
     _autoSave = _prefs.getBool('autoSave') ?? false;
     _fontSize = _prefs.getDouble('fontSize') ?? 16.0;
+    _uiScale = _prefs.getDouble('uiScale') ?? 1.0;
     _fontFamily = _prefs.getString('fontFamily') ?? 'Courier';
     notifyListeners();
   }
@@ -51,15 +54,17 @@ class SettingsService extends ChangeNotifier {
     notifyListeners();
   }
 
+  // Adjusted clamp to allow larger sizes since controls are now easier to access
   Future<void> setFontSize(double size) async {
-    _fontSize = size.clamp(10.0, 32.0);
+    _fontSize = size.clamp(10.0, 48.0);
     await _prefs.setDouble('fontSize', _fontSize);
     notifyListeners();
   }
 
-  Future<void> setFontFamily(String family) async {
-    _fontFamily = family;
-    await _prefs.setString('fontFamily', family);
+  // NEW: UI Scaling Logic
+  Future<void> setUiScale(double scale) async {
+    _uiScale = scale.clamp(0.8, 1.5); // Limit between 80% and 150%
+    await _prefs.setDouble('uiScale', _uiScale);
     notifyListeners();
   }
 }

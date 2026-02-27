@@ -50,57 +50,31 @@ class AppDialogs {
                       activeColor: settings.accentColor,
                       onChanged: (val) => settings.toggleAutoSave(val),
                     ),
+
                     Divider(color: settings.dividerColor),
-                    // Font Size
-                    ListTile(
-                      title: Text(
-                        "Font Size: ${settings.fontSize.toInt()}",
-                        style: TextStyle(color: settings.textColor),
-                      ),
-                      trailing: Row(
-                        mainAxisSize: MainAxisSize.min,
+
+                    // NEW: UI Scaling Slider
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 8.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          IconButton(
-                            icon: Icon(Icons.remove, color: settings.textColor),
-                            onPressed: () =>
-                                settings.setFontSize(settings.fontSize - 1),
+                          Text(
+                            "UI Scale: ${(settings.uiScale * 100).toInt()}%",
+                            style: TextStyle(color: settings.textColor),
                           ),
-                          IconButton(
-                            icon: Icon(Icons.add, color: settings.textColor),
-                            onPressed: () =>
-                                settings.setFontSize(settings.fontSize + 1),
-                          ),
-                        ],
-                      ),
-                    ),
-                    // Font Family
-                    ListTile(
-                      title: Text(
-                        "Font Family",
-                        style: TextStyle(color: settings.textColor),
-                      ),
-                      trailing: DropdownButton<String>(
-                        dropdownColor: settings.sidebarColor,
-                        value: settings.fontFamily,
-                        style: TextStyle(color: settings.textColor),
-                        underline: Container(),
-                        items: const [
-                          DropdownMenuItem(
-                            value: 'Courier',
-                            child: Text("Courier"),
-                          ),
-                          DropdownMenuItem(
-                            value: 'Roboto',
-                            child: Text("Roboto"),
-                          ),
-                          DropdownMenuItem(
-                            value: 'monospace',
-                            child: Text("Monospace"),
+                          Slider(
+                            value: settings.uiScale,
+                            min: 0.8,
+                            max: 1.5,
+                            divisions: 7,
+                            activeColor: settings.accentColor,
+                            inactiveColor: settings.dimTextColor.withOpacity(
+                              0.2,
+                            ),
+                            onChanged: (val) => settings.setUiScale(val),
                           ),
                         ],
-                        onChanged: (val) {
-                          if (val != null) settings.setFontFamily(val);
-                        },
                       ),
                     ),
                   ],
@@ -122,11 +96,11 @@ class AppDialogs {
     );
   }
 
-  // 2. NEW NOTE DIALOG (Fixed Enter Key)
+  // 2. NEW NOTE DIALOG
   static Future<String?> showNewNoteDialog(BuildContext context) async {
     final TextEditingController controller = TextEditingController();
     final RegExp invalidChars = RegExp(r'[<>:"/\\|?*]');
-    final settings = SettingsService(); // Access colors
+    final settings = SettingsService();
 
     return showDialog<String>(
       context: context,
@@ -134,7 +108,6 @@ class AppDialogs {
         String? errorText;
         return StatefulBuilder(
           builder: (context, setState) {
-            // The shared logic for Enter Key and Button Click
             void submit() {
               final text = controller.text.trim();
               if (text.isEmpty) return;
@@ -142,7 +115,7 @@ class AppDialogs {
                 setState(() => errorText = "Invalid characters");
                 return;
               }
-              Navigator.pop(context, text); // Return valid name
+              Navigator.pop(context, text);
             }
 
             return AlertDialog(
@@ -156,7 +129,6 @@ class AppDialogs {
                 autofocus: true,
                 style: TextStyle(color: settings.textColor),
                 cursorColor: settings.accentColor,
-                // FIX: Listen for Enter Key
                 onSubmitted: (_) => submit(),
                 onChanged: (_) {
                   if (errorText != null) setState(() => errorText = null);
@@ -182,7 +154,7 @@ class AppDialogs {
                   ),
                 ),
                 TextButton(
-                  onPressed: submit, // Call shared logic
+                  onPressed: submit,
                   child: Text(
                     "Create",
                     style: TextStyle(color: settings.accentColor),

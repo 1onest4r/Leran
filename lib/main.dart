@@ -16,14 +16,21 @@ class NoteApp extends StatelessWidget {
     return AnimatedBuilder(
       animation: SettingsService(),
       builder: (context, child) {
-        // Theme is mostly handled manually in widgets via SettingsService,
-        // but we set the baseline here.
+        final settings = SettingsService();
+
         return MaterialApp(
           debugShowCheckedModeBanner: false,
           title: 'Digital Garden',
-          theme: SettingsService().isDarkMode
-              ? ThemeData.dark()
-              : ThemeData.light(),
+          theme: settings.isDarkMode ? ThemeData.dark() : ThemeData.light(),
+          // NEW: Apply UI Scaling Globally
+          builder: (context, child) {
+            return MediaQuery(
+              data: MediaQuery.of(
+                context,
+              ).copyWith(textScaler: TextScaler.linear(settings.uiScale)),
+              child: child!,
+            );
+          },
           home: const HomePage(),
         );
       },

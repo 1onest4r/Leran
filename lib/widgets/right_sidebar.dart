@@ -103,208 +103,257 @@ class _RightSidebarState extends State<RightSidebar> {
   Widget build(BuildContext context) {
     final settings = SettingsService();
 
-    // Editor Font Style
-    final TextStyle editorStyle = TextStyle(
-      fontSize: settings.fontSize,
-      fontFamily: settings.fontFamily,
-      height: 1.25,
-      color: settings.isDarkMode ? Colors.grey[400] : Colors.black87,
-    );
+    return AnimatedBuilder(
+      animation: settings,
+      builder: (context, child) {
+        final TextStyle editorStyle = TextStyle(
+          fontSize: settings.fontSize,
+          fontFamily: settings.fontFamily,
+          height: 1.25,
+          color: settings.isDarkMode ? Colors.grey[400] : Colors.black87,
+        );
 
-    return Column(
-      children: [
-        Expanded(
-          child: Stack(
-            children: [
-              Column(
+        return Column(
+          children: [
+            Expanded(
+              child: Stack(
                 children: [
-                  // HEADER
-                  Container(
-                    padding: const EdgeInsets.fromLTRB(40, 40, 80, 10),
-                    child: TextField(
-                      controller: _headerController,
-                      readOnly: true,
-                      onTap: _showRenameDialog,
-                      style: TextStyle(
-                        fontSize: 32,
-                        fontWeight: FontWeight.bold,
-                        fontFamily: 'Courier',
-                        color: settings.textColor,
-                      ),
-                      decoration: InputDecoration(
-                        border: InputBorder.none,
-                        enabledBorder: UnderlineInputBorder(
-                          borderSide: BorderSide(
-                            color: settings.dividerColor,
-                            width: 1,
+                  Column(
+                    children: [
+                      // HEADER
+                      Container(
+                        padding: const EdgeInsets.fromLTRB(40, 40, 80, 10),
+                        child: TextField(
+                          controller: _headerController,
+                          readOnly: true,
+                          onTap: _showRenameDialog,
+                          style: TextStyle(
+                            fontSize: 32,
+                            fontWeight: FontWeight.bold,
+                            fontFamily: 'Courier',
+                            color: settings.textColor,
+                          ),
+                          decoration: InputDecoration(
+                            border: InputBorder.none,
+                            enabledBorder: UnderlineInputBorder(
+                              borderSide: BorderSide(
+                                color: settings.dividerColor,
+                                width: 1,
+                              ),
+                            ),
+                            focusedBorder: UnderlineInputBorder(
+                              borderSide: BorderSide(
+                                color: settings.accentColor,
+                                width: 2,
+                              ),
+                            ),
                           ),
                         ),
-                        focusedBorder: UnderlineInputBorder(
-                          borderSide: BorderSide(
-                            color: settings.accentColor,
-                            width: 2,
+                      ),
+                      // BODY
+                      Expanded(
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 40),
+                          child: TextField(
+                            controller: _bodyController,
+                            onChanged: widget.onContentChanged,
+                            style: editorStyle,
+                            maxLines: null,
+                            expands: true,
+                            keyboardType: TextInputType.multiline,
+                            cursorColor: settings.textColor,
+                            decoration: const InputDecoration(
+                              border: InputBorder.none,
+                              hintText: "Start typing...",
+                            ),
                           ),
                         ),
                       ),
-                    ),
+                    ],
                   ),
-                  // BODY
-                  Expanded(
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 40),
-                      child: TextField(
-                        controller: _bodyController,
-                        onChanged: widget.onContentChanged,
-                        style: editorStyle,
-                        maxLines: null,
-                        expands: true,
-                        keyboardType: TextInputType.multiline,
-                        cursorColor: settings.textColor,
-                        decoration: const InputDecoration(
-                          border: InputBorder.none,
-                          hintText: "Start typing...",
+
+                  // --- UPDATED HAMBURGER MENU ---
+                  Positioned(
+                    top: 20,
+                    right: 20,
+                    child: PopupMenuButton<String>(
+                      icon: Icon(Icons.menu, color: settings.textColor),
+                      color: settings.sidebarColor,
+                      onSelected: (val) {
+                        if (val == 'save') widget.onManualSave();
+                        if (val == 'rename') _showRenameDialog();
+                        if (val == 'delete') widget.onDelete();
+                        // Font Size Logic
+                        if (val == 'zoom_in')
+                          settings.setFontSize(settings.fontSize + 2);
+                        if (val == 'zoom_out')
+                          settings.setFontSize(settings.fontSize - 2);
+                      },
+                      itemBuilder: (context) => [
+                        PopupMenuItem(
+                          value: 'save',
+                          child: Row(
+                            children: [
+                              Icon(Icons.save, color: settings.accentColor),
+                              SizedBox(width: 8),
+                              Text(
+                                "Save",
+                                style: TextStyle(color: settings.textColor),
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
+                        const PopupMenuDivider(),
+                        // Font Controls
+                        PopupMenuItem(
+                          value: 'zoom_in',
+                          child: Row(
+                            children: [
+                              Icon(Icons.zoom_in, color: settings.textColor),
+                              SizedBox(width: 8),
+                              Text(
+                                "Increase Font",
+                                style: TextStyle(color: settings.textColor),
+                              ),
+                            ],
+                          ),
+                        ),
+                        PopupMenuItem(
+                          value: 'zoom_out',
+                          child: Row(
+                            children: [
+                              Icon(Icons.zoom_out, color: settings.textColor),
+                              SizedBox(width: 8),
+                              Text(
+                                "Decrease Font",
+                                style: TextStyle(color: settings.textColor),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const PopupMenuDivider(),
+                        PopupMenuItem(
+                          value: 'rename',
+                          child: Row(
+                            children: [
+                              Icon(Icons.edit, color: settings.textColor),
+                              SizedBox(width: 8),
+                              Text(
+                                "Rename",
+                                style: TextStyle(color: settings.textColor),
+                              ),
+                            ],
+                          ),
+                        ),
+                        PopupMenuItem(
+                          value: 'delete',
+                          child: Row(
+                            children: [
+                              Icon(Icons.delete, color: Colors.red),
+                              SizedBox(width: 8),
+                              Text(
+                                "Delete",
+                                style: TextStyle(color: Colors.red),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ],
               ),
-              // HAMBURGER MENU
-              Positioned(
-                top: 20,
-                right: 20,
-                child: PopupMenuButton<String>(
-                  icon: Icon(Icons.menu, color: settings.textColor),
-                  color: settings.sidebarColor,
-                  onSelected: (val) {
-                    if (val == 'save') widget.onManualSave();
-                    if (val == 'rename') _showRenameDialog();
-                    if (val == 'delete') widget.onDelete();
-                  },
-                  itemBuilder: (context) => [
-                    PopupMenuItem(
-                      value: 'save',
-                      child: Row(
-                        children: [
-                          Icon(Icons.save, color: settings.accentColor),
-                          SizedBox(width: 8),
-                          Text(
-                            "Save",
-                            style: TextStyle(color: settings.textColor),
-                          ),
-                        ],
-                      ),
-                    ),
-                    PopupMenuItem(
-                      value: 'rename',
-                      child: Row(
-                        children: [
-                          Icon(Icons.edit, color: settings.textColor),
-                          SizedBox(width: 8),
-                          Text(
-                            "Rename",
-                            style: TextStyle(color: settings.textColor),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const PopupMenuItem(
-                      value: 'delete',
-                      child: Row(
-                        children: [
-                          Icon(Icons.delete, color: Colors.red),
-                          SizedBox(width: 8),
-                          Text("Delete", style: TextStyle(color: Colors.red)),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
+            ),
+            // BOTTOM TABS
+            Container(
+              height: 36,
+              width: double.infinity,
+              decoration: BoxDecoration(
+                color: settings.sidebarColor,
+                border: Border(top: BorderSide(color: settings.dividerColor)),
               ),
-            ],
-          ),
-        ),
-        // BOTTOM TABS
-        Container(
-          height: 36,
-          width: double.infinity,
-          decoration: BoxDecoration(
-            color: settings.sidebarColor,
-            border: Border(top: BorderSide(color: settings.dividerColor)),
-          ),
-          child: ListView.builder(
-            scrollDirection: Axis.horizontal,
-            itemCount: widget.openedTabs.length,
-            itemBuilder: (context, index) {
-              final file = widget.openedTabs[index];
-              final fileName = file.uri.pathSegments.lastWhere(
-                (s) => s.isNotEmpty,
-              );
-              final isActive = file.path == widget.activeTab.path;
-              final isUnsaved = widget.unsavedPaths.contains(file.path);
+              child: ListView.builder(
+                scrollDirection: Axis.horizontal,
+                itemCount: widget.openedTabs.length,
+                itemBuilder: (context, index) {
+                  final file = widget.openedTabs[index];
+                  final fileName = file.uri.pathSegments.lastWhere(
+                    (s) => s.isNotEmpty,
+                  );
+                  final isActive = file.path == widget.activeTab.path;
+                  final isUnsaved = widget.unsavedPaths.contains(file.path);
 
-              return InkWell(
-                onTap: () => widget.onTabSelected(file),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 15),
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    color: isActive
-                        ? settings.scaffoldColor
-                        : Colors.transparent,
-                    border: Border(
-                      right: BorderSide(
-                        color: settings.dividerColor,
-                        width: 0.5,
-                      ),
-                      top: isActive
-                          ? BorderSide(color: settings.accentColor, width: 2)
-                          : BorderSide.none,
-                    ),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(
-                        Icons.description,
-                        size: 14,
-                        color: isActive ? settings.accentColor : Colors.grey,
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        fileName,
-                        style: TextStyle(
-                          color: isActive ? settings.textColor : Colors.grey,
-                          fontSize: 12,
+                  return InkWell(
+                    onTap: () => widget.onTabSelected(file),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 15),
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        color: isActive
+                            ? settings.scaffoldColor
+                            : Colors.transparent,
+                        border: Border(
+                          right: BorderSide(
+                            color: settings.dividerColor,
+                            width: 0.5,
+                          ),
+                          top: isActive
+                              ? BorderSide(
+                                  color: settings.accentColor,
+                                  width: 2,
+                                )
+                              : BorderSide.none,
                         ),
                       ),
-                      const SizedBox(width: 8),
-                      isUnsaved
-                          ? Container(
-                              width: 8,
-                              height: 8,
-                              decoration: BoxDecoration(
-                                color: settings.textColor,
-                                shape: BoxShape.circle,
-                              ),
-                            )
-                          : InkWell(
-                              onTap: () => widget.onTabClosed(file),
-                              child: Icon(
-                                Icons.close,
-                                size: 14,
-                                color: isActive
-                                    ? settings.textColor
-                                    : Colors.transparent,
-                              ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.description,
+                            size: 14,
+                            color: isActive
+                                ? settings.accentColor
+                                : Colors.grey,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            fileName,
+                            style: TextStyle(
+                              color: isActive
+                                  ? settings.textColor
+                                  : Colors.grey,
+                              fontSize: 12,
                             ),
-                    ],
-                  ),
-                ),
-              );
-            },
-          ),
-        ),
-      ],
+                          ),
+                          const SizedBox(width: 8),
+                          isUnsaved
+                              ? Container(
+                                  width: 8,
+                                  height: 8,
+                                  decoration: BoxDecoration(
+                                    color: settings.textColor,
+                                    shape: BoxShape.circle,
+                                  ),
+                                )
+                              : InkWell(
+                                  onTap: () => widget.onTabClosed(file),
+                                  child: Icon(
+                                    Icons.close,
+                                    size: 14,
+                                    color: isActive
+                                        ? settings.textColor
+                                        : Colors.transparent,
+                                  ),
+                                ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 }

@@ -9,27 +9,13 @@ used external packages:
 -file_picker ^10.3.10
 
 TODO:
+fix the ui scaling issue in the settings
+change the font size option to numbering system
+add into the settings option for selection a new folder
+enable a feature where it asks for permission from user
+in note taking section add a feature for headers, line breaker and copying stylized text cleanly
+pick a proper color for better UX
 
+"=====stuff to remember"
 -building ui must be faster than 16ms
-
--add into the settings option for selection a new folder
-
-"""=====things to add after done with making the home screen fully functional=====
-
--enable a feature where it asks for permission from user
-
--in note taking section add a feature for headers, line breaker,
-and copying stylized text cleanly
-
--pick a proper color for better UX
-
--add option for note taking section to able to increase the size of fonts
-
-"""================================================================================
-
-"""
-
--fix extension issue on the left sidebar (haven't found any issue to fix)
--make the cycling the tabs functional(cycleable by command?)
-
-"""
+"======================"
