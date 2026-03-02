@@ -6,7 +6,7 @@ import 'package:file_picker/file_picker.dart';
 import '../services/file_service.dart';
 import '../services/settings_service.dart';
 import '../utils/app_dialogs.dart';
-import '../utils/search_delegate.dart';
+import '../utils/search_dialog.dart'; // NEW IMPORT
 import '../widgets/left_sidebar.dart';
 import '../widgets/right_sidebar.dart';
 
@@ -34,12 +34,19 @@ class _HomePageState extends State<HomePage> {
   }
 
   // --- ACTIONS ---
+
+  // NEW: Updated to use the custom pop-up dialog
   void _openSearch() async {
     if (_files.isEmpty) return;
-    final FileSystemEntity? result = await showSearch<FileSystemEntity?>(
+
+    final FileSystemEntity? result = await showDialog<FileSystemEntity?>(
       context: context,
-      delegate: FileSearchDelegate(_files),
+      barrierColor: Colors.black.withOpacity(
+        0.4,
+      ), // Darken background slightly behind pop-up
+      builder: (context) => SearchDialog(files: _files),
     );
+
     if (result != null) _onFileSelected(result);
   }
 
@@ -79,8 +86,6 @@ class _HomePageState extends State<HomePage> {
   void _handleContentChange(String newContent) {
     if (_selectedFile == null) return;
 
-    // CRITICAL FIX: We must ALWAYS update the active content variable
-    // Otherwise the save function might write outdated text to the file.
     _fileContent = newContent;
 
     if (SettingsService().autoSave) {
@@ -94,10 +99,8 @@ class _HomePageState extends State<HomePage> {
 
   Future<void> _manualSave() async {
     if (_selectedFile != null) {
-      // Get the true/false result of the save attempt
       final bool success = await _saveToDisk(_selectedFile!.path, _fileContent);
 
-      // ONLY show the success pop-up if the file actually saved properly
       if (success && mounted) {
         showDialog(
           context: context,
@@ -149,18 +152,14 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  // FIX: Make this return a bool so we know if it succeeded or failed
   Future<bool> _saveToDisk(String path, String content) async {
     try {
-      // 'flush: true' forces the operating system to immediately write it to disk
       await File(path).writeAsString(content, flush: true);
 
       if (mounted) setState(() => _unsavedPaths.remove(path));
-      return true; // Save was successful!
+      return true;
     } catch (e) {
       debugPrint("Save failed: $e");
-
-      // We now alert the user if something prevented the file from saving
       if (mounted) {
         final settings = SettingsService();
         showDialog(
@@ -187,7 +186,7 @@ class _HomePageState extends State<HomePage> {
           ),
         );
       }
-      return false; // Save failed!
+      return false;
     }
   }
 
