@@ -36,7 +36,6 @@ class _HomePageState extends State<HomePage> {
   // --- ACTIONS ---
   void _openSearch() async {
     if (_files.isEmpty) return;
-    // Explicit type added for search delegate
     final FileSystemEntity? result = await showSearch<FileSystemEntity?>(
       context: context,
       delegate: FileSearchDelegate(_files),
@@ -79,10 +78,14 @@ class _HomePageState extends State<HomePage> {
 
   void _handleContentChange(String newContent) {
     if (_selectedFile == null) return;
+
+    // CRITICAL FIX: We must ALWAYS update the active content variable
+    // Otherwise the save function might write outdated text to the file.
+    _fileContent = newContent;
+
     if (SettingsService().autoSave) {
       _saveToDisk(_selectedFile!.path, newContent);
     } else {
-      _fileContent = newContent;
       if (!_unsavedPaths.contains(_selectedFile!.path)) {
         setState(() => _unsavedPaths.add(_selectedFile!.path));
       }
@@ -90,16 +93,101 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> _manualSave() async {
-    if (_selectedFile != null)
-      await _saveToDisk(_selectedFile!.path, _fileContent);
+    if (_selectedFile != null) {
+      // Get the true/false result of the save attempt
+      final bool success = await _saveToDisk(_selectedFile!.path, _fileContent);
+
+      // ONLY show the success pop-up if the file actually saved properly
+      if (success && mounted) {
+        showDialog(
+          context: context,
+          barrierColor: Colors.black12,
+          barrierDismissible: false,
+          builder: (BuildContext dialogContext) {
+            Future.delayed(const Duration(milliseconds: 1500), () {
+              if (dialogContext.mounted &&
+                  Navigator.of(dialogContext).canPop()) {
+                Navigator.of(dialogContext).pop();
+              }
+            });
+
+            final settings = SettingsService();
+            return AlertDialog(
+              backgroundColor: settings.sidebarColor,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+                side: BorderSide(color: settings.dividerColor),
+              ),
+              contentPadding: const EdgeInsets.symmetric(
+                vertical: 20,
+                horizontal: 24,
+              ),
+              content: Row(
+                mainAxisSize: MainAxisSize.min,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.check_circle_outline,
+                    color: settings.accentColor,
+                    size: 28,
+                  ),
+                  const SizedBox(width: 12),
+                  Text(
+                    "File Saved!",
+                    style: TextStyle(
+                      color: settings.textColor,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      }
+    }
   }
 
-  Future<void> _saveToDisk(String path, String content) async {
+  // FIX: Make this return a bool so we know if it succeeded or failed
+  Future<bool> _saveToDisk(String path, String content) async {
     try {
-      await File(path).writeAsString(content);
+      // 'flush: true' forces the operating system to immediately write it to disk
+      await File(path).writeAsString(content, flush: true);
+
       if (mounted) setState(() => _unsavedPaths.remove(path));
+      return true; // Save was successful!
     } catch (e) {
       debugPrint("Save failed: $e");
+
+      // We now alert the user if something prevented the file from saving
+      if (mounted) {
+        final settings = SettingsService();
+        showDialog(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            backgroundColor: settings.sidebarColor,
+            title: const Text(
+              "Save Error",
+              style: TextStyle(color: Colors.redAccent),
+            ),
+            content: Text(
+              "Could not save the file. Check folder permissions.\n\nError details: $e",
+              style: TextStyle(color: settings.textColor),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: Text(
+                  "Close",
+                  style: TextStyle(color: settings.accentColor),
+                ),
+              ),
+            ],
+          ),
+        );
+      }
+      return false; // Save failed!
     }
   }
 
@@ -168,7 +256,6 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
-    // Rebuild when settings change (theme toggle)
     return AnimatedBuilder(
       animation: SettingsService(),
       builder: (context, child) {
@@ -176,7 +263,6 @@ class _HomePageState extends State<HomePage> {
         return Scaffold(
           backgroundColor: settings.scaffoldColor,
           body: SafeArea(
-            // RESTORED: The "No Vault" Screen
             child: _selectedDirectory == null
                 ? Center(
                     child: Column(
@@ -218,7 +304,6 @@ class _HomePageState extends State<HomePage> {
                       ],
                     ),
                   )
-                // MAIN UI
                 : Row(
                     children: [
                       Expanded(

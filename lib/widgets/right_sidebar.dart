@@ -99,6 +99,108 @@ class _RightSidebarState extends State<RightSidebar> {
     );
   }
 
+  // NEW: Interactive Text Size Dialog
+  void _showTextSizeDialog() {
+    final settings = SettingsService();
+    final TextEditingController controller = TextEditingController(
+      text: settings.fontSize.toInt().toString(),
+    );
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            void updateSize(double newSize) {
+              if (newSize < 10) newSize = 10;
+              if (newSize > 48) newSize = 48;
+              settings.setFontSize(newSize);
+              setState(() {
+                controller.text = newSize.toInt().toString();
+              });
+            }
+
+            return AlertDialog(
+              backgroundColor: settings.sidebarColor,
+              title: Text(
+                "Adjust Text Size",
+                style: TextStyle(color: settings.textColor),
+              ),
+              content: Row(
+                mainAxisSize: MainAxisSize.min,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  // Smaller Button
+                  IconButton(
+                    icon: Icon(
+                      Icons.chevron_left,
+                      color: settings.dimTextColor,
+                      size: 30,
+                    ),
+                    onPressed: () => updateSize(settings.fontSize - 1),
+                  ),
+                  // Typed input field
+                  SizedBox(
+                    width: 60,
+                    child: TextField(
+                      controller: controller,
+                      keyboardType: TextInputType.number,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: settings.textColor,
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      decoration: InputDecoration(
+                        enabledBorder: UnderlineInputBorder(
+                          borderSide: BorderSide(color: settings.dimTextColor),
+                        ),
+                        focusedBorder: UnderlineInputBorder(
+                          borderSide: BorderSide(color: settings.accentColor),
+                        ),
+                      ),
+                      onSubmitted: (val) {
+                        final parsed = double.tryParse(val);
+                        if (parsed != null) {
+                          updateSize(parsed);
+                        } else {
+                          // Reset to previous valid state if they input gibberish
+                          setState(() {
+                            controller.text = settings.fontSize
+                                .toInt()
+                                .toString();
+                          });
+                        }
+                      },
+                    ),
+                  ),
+                  // Larger Button
+                  IconButton(
+                    icon: Icon(
+                      Icons.chevron_right,
+                      color: settings.dimTextColor,
+                      size: 30,
+                    ),
+                    onPressed: () => updateSize(settings.fontSize + 1),
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: Text(
+                    "Done",
+                    style: TextStyle(color: settings.accentColor),
+                  ),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final settings = SettingsService();
@@ -172,7 +274,7 @@ class _RightSidebarState extends State<RightSidebar> {
                     ],
                   ),
 
-                  // --- UPDATED HAMBURGER MENU ---
+                  // HAMBURGER MENU
                   Positioned(
                     top: 20,
                     right: 20,
@@ -183,11 +285,8 @@ class _RightSidebarState extends State<RightSidebar> {
                         if (val == 'save') widget.onManualSave();
                         if (val == 'rename') _showRenameDialog();
                         if (val == 'delete') widget.onDelete();
-                        // Font Size Logic
-                        if (val == 'zoom_in')
-                          settings.setFontSize(settings.fontSize + 2);
-                        if (val == 'zoom_out')
-                          settings.setFontSize(settings.fontSize - 2);
+                        // Call the newly created Dialog
+                        if (val == 'font_size') _showTextSizeDialog();
                       },
                       itemBuilder: (context) => [
                         PopupMenuItem(
@@ -195,7 +294,7 @@ class _RightSidebarState extends State<RightSidebar> {
                           child: Row(
                             children: [
                               Icon(Icons.save, color: settings.accentColor),
-                              SizedBox(width: 8),
+                              const SizedBox(width: 8),
                               Text(
                                 "Save",
                                 style: TextStyle(color: settings.textColor),
@@ -204,28 +303,18 @@ class _RightSidebarState extends State<RightSidebar> {
                           ),
                         ),
                         const PopupMenuDivider(),
-                        // Font Controls
+                        // Replace the multiple zoom in/out with the text size menu Item
                         PopupMenuItem(
-                          value: 'zoom_in',
+                          value: 'font_size',
                           child: Row(
                             children: [
-                              Icon(Icons.zoom_in, color: settings.textColor),
-                              SizedBox(width: 8),
-                              Text(
-                                "Increase Font",
-                                style: TextStyle(color: settings.textColor),
+                              Icon(
+                                Icons.format_size,
+                                color: settings.textColor,
                               ),
-                            ],
-                          ),
-                        ),
-                        PopupMenuItem(
-                          value: 'zoom_out',
-                          child: Row(
-                            children: [
-                              Icon(Icons.zoom_out, color: settings.textColor),
-                              SizedBox(width: 8),
+                              const SizedBox(width: 8),
                               Text(
-                                "Decrease Font",
+                                "Text Size",
                                 style: TextStyle(color: settings.textColor),
                               ),
                             ],
@@ -237,7 +326,7 @@ class _RightSidebarState extends State<RightSidebar> {
                           child: Row(
                             children: [
                               Icon(Icons.edit, color: settings.textColor),
-                              SizedBox(width: 8),
+                              const SizedBox(width: 8),
                               Text(
                                 "Rename",
                                 style: TextStyle(color: settings.textColor),
@@ -250,7 +339,7 @@ class _RightSidebarState extends State<RightSidebar> {
                           child: Row(
                             children: [
                               Icon(Icons.delete, color: Colors.red),
-                              SizedBox(width: 8),
+                              const SizedBox(width: 8),
                               Text(
                                 "Delete",
                                 style: TextStyle(color: Colors.red),
