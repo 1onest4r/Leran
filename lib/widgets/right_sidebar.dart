@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/gestures.dart';
 import '../services/settings_service.dart';
 
 class RightSidebar extends StatefulWidget {
@@ -38,12 +39,22 @@ class RightSidebar extends StatefulWidget {
 class _RightSidebarState extends State<RightSidebar> {
   late TextEditingController _headerController;
   late SyntaxHighlightingController _bodyController;
+  late ScrollController _tabScrollController;
 
   @override
   void initState() {
     super.initState();
     _headerController = TextEditingController(text: widget.title);
     _bodyController = SyntaxHighlightingController(text: widget.content);
+    _tabScrollController = ScrollController();
+  }
+
+  @override
+  void dispose() {
+    _headerController.dispose();
+    _bodyController.dispose();
+    _tabScrollController.dispose();
+    super.dispose();
   }
 
   @override
@@ -63,16 +74,19 @@ class _RightSidebarState extends State<RightSidebar> {
       builder: (context) => AlertDialog(
         backgroundColor: settings.sidebarColor,
         title: Text("Rename", style: TextStyle(color: settings.textColor)),
-        content: TextField(
-          controller: controller,
-          style: TextStyle(color: settings.textColor),
-          onSubmitted: (val) {
-            if (val.isNotEmpty) widget.onRename(val);
-            Navigator.pop(context);
-          },
-          decoration: InputDecoration(
-            focusedBorder: UnderlineInputBorder(
-              borderSide: BorderSide(color: settings.accentColor),
+        content: SizedBox(
+          width: 400,
+          child: TextField(
+            controller: controller,
+            style: TextStyle(color: settings.textColor),
+            onSubmitted: (val) {
+              if (val.isNotEmpty) widget.onRename(val);
+              Navigator.pop(context);
+            },
+            decoration: InputDecoration(
+              focusedBorder: UnderlineInputBorder(
+                borderSide: BorderSide(color: settings.accentColor),
+              ),
             ),
           ),
         ),
@@ -99,7 +113,6 @@ class _RightSidebarState extends State<RightSidebar> {
     );
   }
 
-  // NEW: Interactive Text Size Dialog
   void _showTextSizeDialog() {
     final settings = SettingsService();
     final TextEditingController controller = TextEditingController(
@@ -130,7 +143,6 @@ class _RightSidebarState extends State<RightSidebar> {
                 mainAxisSize: MainAxisSize.min,
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  // Smaller Button
                   IconButton(
                     icon: Icon(
                       Icons.chevron_left,
@@ -139,7 +151,6 @@ class _RightSidebarState extends State<RightSidebar> {
                     ),
                     onPressed: () => updateSize(settings.fontSize - 1),
                   ),
-                  // Typed input field
                   SizedBox(
                     width: 60,
                     child: TextField(
@@ -164,7 +175,6 @@ class _RightSidebarState extends State<RightSidebar> {
                         if (parsed != null) {
                           updateSize(parsed);
                         } else {
-                          // Reset to previous valid state if they input gibberish
                           setState(() {
                             controller.text = settings.fontSize
                                 .toInt()
@@ -174,7 +184,6 @@ class _RightSidebarState extends State<RightSidebar> {
                       },
                     ),
                   ),
-                  // Larger Button
                   IconButton(
                     icon: Icon(
                       Icons.chevron_right,
@@ -285,7 +294,6 @@ class _RightSidebarState extends State<RightSidebar> {
                         if (val == 'save') widget.onManualSave();
                         if (val == 'rename') _showRenameDialog();
                         if (val == 'delete') widget.onDelete();
-                        // Call the newly created Dialog
                         if (val == 'font_size') _showTextSizeDialog();
                       },
                       itemBuilder: (context) => [
@@ -303,7 +311,6 @@ class _RightSidebarState extends State<RightSidebar> {
                           ),
                         ),
                         const PopupMenuDivider(),
-                        // Replace the multiple zoom in/out with the text size menu Item
                         PopupMenuItem(
                           value: 'font_size',
                           child: Row(
@@ -353,6 +360,7 @@ class _RightSidebarState extends State<RightSidebar> {
                 ],
               ),
             ),
+
             // BOTTOM TABS
             Container(
               height: 36,
@@ -361,88 +369,154 @@ class _RightSidebarState extends State<RightSidebar> {
                 color: settings.sidebarColor,
                 border: Border(top: BorderSide(color: settings.dividerColor)),
               ),
-              child: ListView.builder(
-                scrollDirection: Axis.horizontal,
-                itemCount: widget.openedTabs.length,
-                itemBuilder: (context, index) {
-                  final file = widget.openedTabs[index];
-                  final fileName = file.uri.pathSegments.lastWhere(
-                    (s) => s.isNotEmpty,
-                  );
-                  final isActive = file.path == widget.activeTab.path;
-                  final isUnsaved = widget.unsavedPaths.contains(file.path);
-
-                  return InkWell(
-                    onTap: () => widget.onTabSelected(file),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 15),
-                      alignment: Alignment.center,
-                      decoration: BoxDecoration(
-                        color: isActive
-                            ? settings.scaffoldColor
-                            : Colors.transparent,
-                        border: Border(
-                          right: BorderSide(
-                            color: settings.dividerColor,
-                            width: 0.5,
-                          ),
-                          top: isActive
-                              ? BorderSide(
-                                  color: settings.accentColor,
-                                  width: 2,
-                                )
-                              : BorderSide.none,
-                        ),
+              child: Listener(
+                onPointerSignal: (pointerSignal) {
+                  if (pointerSignal is PointerScrollEvent) {
+                    final offset = pointerSignal.scrollDelta.dy;
+                    _tabScrollController.jumpTo(
+                      (_tabScrollController.offset + offset).clamp(
+                        0.0,
+                        _tabScrollController.position.maxScrollExtent,
                       ),
-                      child: Row(
-                        children: [
-                          Icon(
-                            Icons.description,
-                            size: 14,
+                    );
+                  }
+                },
+                child: ScrollConfiguration(
+                  behavior: ScrollConfiguration.of(context).copyWith(
+                    scrollbars: false,
+                    dragDevices: {
+                      PointerDeviceKind.touch,
+                      PointerDeviceKind.mouse,
+                      PointerDeviceKind.trackpad,
+                    },
+                  ),
+                  child: ListView.builder(
+                    controller: _tabScrollController,
+                    scrollDirection: Axis.horizontal,
+                    itemCount: widget.openedTabs.length,
+                    itemBuilder: (context, index) {
+                      final file = widget.openedTabs[index];
+                      final fileName = file.uri.pathSegments.lastWhere(
+                        (s) => s.isNotEmpty,
+                      );
+                      final isActive = file.path == widget.activeTab.path;
+                      final isUnsaved = widget.unsavedPaths.contains(file.path);
+
+                      return InkWell(
+                        onTap: () => widget.onTabSelected(file),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 15),
+                          alignment: Alignment.center,
+                          decoration: BoxDecoration(
                             color: isActive
-                                ? settings.accentColor
-                                : Colors.grey,
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            fileName,
-                            style: TextStyle(
-                              color: isActive
-                                  ? settings.textColor
-                                  : Colors.grey,
-                              fontSize: 12,
+                                ? settings.scaffoldColor
+                                : Colors.transparent,
+                            border: Border(
+                              right: BorderSide(
+                                color: settings.dividerColor,
+                                width: 0.5,
+                              ),
+                              top: isActive
+                                  ? BorderSide(
+                                      color: settings.accentColor,
+                                      width: 2,
+                                    )
+                                  : BorderSide.none,
                             ),
                           ),
-                          const SizedBox(width: 8),
-                          isUnsaved
-                              ? Container(
-                                  width: 8,
-                                  height: 8,
-                                  decoration: BoxDecoration(
-                                    color: settings.textColor,
-                                    shape: BoxShape.circle,
-                                  ),
-                                )
-                              : InkWell(
-                                  onTap: () => widget.onTabClosed(file),
-                                  child: Icon(
-                                    Icons.close,
-                                    size: 14,
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.description,
+                                size: 14,
+                                color: isActive
+                                    ? settings.accentColor
+                                    : Colors.grey,
+                              ),
+                              const SizedBox(width: 8),
+                              ConstrainedBox(
+                                constraints: const BoxConstraints(
+                                  maxWidth: 150,
+                                ),
+                                child: Text(
+                                  fileName,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
                                     color: isActive
                                         ? settings.textColor
-                                        : Colors.transparent,
+                                        : Colors.grey,
+                                    fontSize: 12,
                                   ),
                                 ),
-                        ],
-                      ),
-                    ),
-                  );
-                },
+                              ),
+                              const SizedBox(width: 8),
+                              isUnsaved
+                                  ? Container(
+                                      width: 8,
+                                      height: 8,
+                                      decoration: BoxDecoration(
+                                        color: settings.textColor,
+                                        shape: BoxShape.circle,
+                                      ),
+                                    )
+                                  // NEW: Using our custom hover-aware close button
+                                  : _TabCloseButton(
+                                      onTap: () => widget.onTabClosed(file),
+                                    ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
               ),
             ),
           ],
         );
       },
+    );
+  }
+}
+
+// --- NEW: Custom Hoverable Tab Close Button ---
+class _TabCloseButton extends StatefulWidget {
+  final VoidCallback onTap;
+
+  const _TabCloseButton({required this.onTap});
+
+  @override
+  State<_TabCloseButton> createState() => _TabCloseButtonState();
+}
+
+class _TabCloseButtonState extends State<_TabCloseButton> {
+  bool _isHovering = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final settings = SettingsService();
+
+    // Hover logic for dark/light themes
+    Color hoverColor = settings.isDarkMode ? Colors.white : Colors.black;
+    Color defaultColor = Colors.grey;
+
+    return MouseRegion(
+      onEnter: (_) => setState(() => _isHovering = true),
+      onExit: (_) => setState(() => _isHovering = false),
+      child: GestureDetector(
+        onTap: widget.onTap,
+        child: Container(
+          // Adds a tiny bit of padding so it's easier to click
+          padding: const EdgeInsets.all(2),
+          child: Icon(
+            Icons.close,
+            size: 14,
+            color: _isHovering ? hoverColor : defaultColor,
+          ),
+        ),
+      ),
     );
   }
 }
