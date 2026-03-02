@@ -9,9 +9,7 @@ used external packages:
 -file_picker ^10.3.10
 
 TODO:
-fix the saving issue where save button doesn't work and only saving highlighted stuff when cycling (possibly not working in light theme)
-fix tab container must have max tab size otherwise it would fill the whole thing
-fix file creating pop up stretching horizontally to fit the whole name of the file
+fix text in header not being saved
 fix the ui scaling issue in the settings
 change the font size option to numbering system
 add into the settings option for selection a new folder
