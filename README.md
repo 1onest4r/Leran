@@ -12,6 +12,7 @@ TODO:
 fix in note taking section the cursor not moving into the blank space
 fix text in header not being saved
 fix the ui scaling issue in the settings
+add a button for choosing another folder in the current session
 change the font size option to numbering system
 add into the settings option for selection a new folder
 enable a feature where it asks for permission from user
