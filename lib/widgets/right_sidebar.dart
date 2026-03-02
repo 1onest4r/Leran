@@ -37,6 +37,7 @@ class RightSidebar extends StatefulWidget {
 }
 
 class _RightSidebarState extends State<RightSidebar> {
+  // RESTORED: The header controller
   late TextEditingController _headerController;
   late SyntaxHighlightingController _bodyController;
   late ScrollController _tabScrollController;
@@ -44,7 +45,8 @@ class _RightSidebarState extends State<RightSidebar> {
   @override
   void initState() {
     super.initState();
-    _headerController = TextEditingController(text: widget.title);
+    // Starts empty so it shows the placeholder instead of the file name
+    _headerController = TextEditingController();
     _bodyController = SyntaxHighlightingController(text: widget.content);
     _tabScrollController = ScrollController();
   }
@@ -61,7 +63,7 @@ class _RightSidebarState extends State<RightSidebar> {
   void didUpdateWidget(covariant RightSidebar oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.activeTab.path != widget.activeTab.path) {
-      _headerController.text = widget.title;
+      _headerController.clear(); // Clear the custom title when switching tabs
       _bodyController.text = widget.content;
     }
   }
@@ -69,7 +71,7 @@ class _RightSidebarState extends State<RightSidebar> {
   void _showRenameDialog() {
     final settings = SettingsService();
 
-    // Quality of life: Strip the extension from the text field so user just edits the base name
+    // Strip the extension from the text field so user just edits the base name
     String baseName = widget.title;
     if (baseName.endsWith('.md'))
       baseName = baseName.substring(0, baseName.length - 3);
@@ -77,8 +79,6 @@ class _RightSidebarState extends State<RightSidebar> {
       baseName = baseName.substring(0, baseName.length - 4);
 
     final controller = TextEditingController(text: baseName);
-
-    // Automatically select the text when dialog opens
     controller.selection = TextSelection(
       baseOffset: 0,
       extentOffset: baseName.length,
@@ -88,8 +88,7 @@ class _RightSidebarState extends State<RightSidebar> {
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: settings.sidebarColor,
-        title: Text("Rename", style: TextStyle(color: settings.textColor)),
-        // GUARANTEED FIX: This locks the width and prevents stretching
+        title: Text("Rename File", style: TextStyle(color: settings.textColor)),
         content: SizedBox(
           width: 400,
           child: TextField(
@@ -238,7 +237,7 @@ class _RightSidebarState extends State<RightSidebar> {
         final TextStyle editorStyle = TextStyle(
           fontSize: settings.fontSize,
           fontFamily: settings.fontFamily,
-          height: 1.25,
+          height: 1.5,
           color: settings.isDarkMode ? Colors.grey[400] : Colors.black87,
         );
 
@@ -249,13 +248,12 @@ class _RightSidebarState extends State<RightSidebar> {
                 children: [
                   Column(
                     children: [
-                      // HEADER
+                      // RESTORED: HEADER
                       Container(
                         padding: const EdgeInsets.fromLTRB(40, 40, 80, 10),
                         child: TextField(
                           controller: _headerController,
-                          readOnly: true,
-                          onTap: _showRenameDialog, // Clicking Title
+                          // No longer readOnly, user can type here freely!
                           style: TextStyle(
                             fontSize: 32,
                             fontWeight: FontWeight.bold,
@@ -263,6 +261,11 @@ class _RightSidebarState extends State<RightSidebar> {
                             color: settings.textColor,
                           ),
                           decoration: InputDecoration(
+                            hintText: "Add a title...",
+                            hintStyle: TextStyle(
+                              color: settings.dimTextColor.withOpacity(0.5),
+                              fontStyle: FontStyle.italic,
+                            ),
                             border: InputBorder.none,
                             enabledBorder: UnderlineInputBorder(
                               borderSide: BorderSide(
@@ -279,6 +282,7 @@ class _RightSidebarState extends State<RightSidebar> {
                           ),
                         ),
                       ),
+
                       // BODY
                       Expanded(
                         child: Container(
@@ -291,9 +295,13 @@ class _RightSidebarState extends State<RightSidebar> {
                             expands: true,
                             keyboardType: TextInputType.multiline,
                             cursorColor: settings.textColor,
-                            decoration: const InputDecoration(
+                            decoration: InputDecoration(
                               border: InputBorder.none,
-                              hintText: "Start typing...",
+                              hintText: "Start writing...",
+                              hintStyle: TextStyle(
+                                color: settings.dimTextColor.withOpacity(0.4),
+                                fontStyle: FontStyle.italic,
+                              ),
                             ),
                           ),
                         ),
@@ -310,8 +318,7 @@ class _RightSidebarState extends State<RightSidebar> {
                       color: settings.sidebarColor,
                       onSelected: (val) {
                         if (val == 'save') widget.onManualSave();
-                        if (val == 'rename')
-                          _showRenameDialog(); // Hamburger Item
+                        if (val == 'rename') _showRenameDialog();
                         if (val == 'delete') widget.onDelete();
                         if (val == 'font_size') _showTextSizeDialog();
                       },
@@ -354,7 +361,7 @@ class _RightSidebarState extends State<RightSidebar> {
                               Icon(Icons.edit, color: settings.textColor),
                               const SizedBox(width: 8),
                               Text(
-                                "Rename",
+                                "Rename File",
                                 style: TextStyle(color: settings.textColor),
                               ),
                             ],
@@ -367,7 +374,7 @@ class _RightSidebarState extends State<RightSidebar> {
                               Icon(Icons.delete, color: Colors.red),
                               const SizedBox(width: 8),
                               Text(
-                                "Delete",
+                                "Delete File",
                                 style: TextStyle(color: Colors.red),
                               ),
                             ],
