@@ -53,7 +53,7 @@ class AppDialogs {
 
                     Divider(color: settings.dividerColor),
 
-                    // NEW: UI Scaling Slider
+                    // UI Scaling Slider
                     Padding(
                       padding: const EdgeInsets.symmetric(vertical: 8.0),
                       child: Column(
@@ -124,24 +124,28 @@ class AppDialogs {
                 "New Note",
                 style: TextStyle(color: settings.textColor),
               ),
-              content: TextField(
-                controller: controller,
-                autofocus: true,
-                style: TextStyle(color: settings.textColor),
-                cursorColor: settings.accentColor,
-                onSubmitted: (_) => submit(),
-                onChanged: (_) {
-                  if (errorText != null) setState(() => errorText = null);
-                },
-                decoration: InputDecoration(
-                  hintText: "Enter filename...",
-                  hintStyle: TextStyle(color: settings.dimTextColor),
-                  errorText: errorText,
-                  enabledBorder: UnderlineInputBorder(
-                    borderSide: BorderSide(color: settings.dimTextColor),
-                  ),
-                  focusedBorder: UnderlineInputBorder(
-                    borderSide: BorderSide(color: settings.accentColor),
+              // FIX: Wrapped TextField in a SizedBox to prevent horizontal stretching
+              content: SizedBox(
+                width: 400,
+                child: TextField(
+                  controller: controller,
+                  autofocus: true,
+                  style: TextStyle(color: settings.textColor),
+                  cursorColor: settings.accentColor,
+                  onSubmitted: (_) => submit(),
+                  onChanged: (_) {
+                    if (errorText != null) setState(() => errorText = null);
+                  },
+                  decoration: InputDecoration(
+                    hintText: "Enter filename...",
+                    hintStyle: TextStyle(color: settings.dimTextColor),
+                    errorText: errorText,
+                    enabledBorder: UnderlineInputBorder(
+                      borderSide: BorderSide(color: settings.dimTextColor),
+                    ),
+                    focusedBorder: UnderlineInputBorder(
+                      borderSide: BorderSide(color: settings.accentColor),
+                    ),
                   ),
                 ),
               ),

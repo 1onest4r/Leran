@@ -97,24 +97,28 @@ class _LeftSidebarState extends State<LeftSidebar> {
                 "Rename Vault",
                 style: TextStyle(color: settings.textColor),
               ),
-              content: TextField(
-                controller: controller,
-                autofocus: true,
-                onSubmitted: (_) => submit(),
-                onChanged: (_) {
-                  if (errorText != null) setState(() => errorText = null);
-                },
-                style: TextStyle(color: settings.textColor),
-                cursorColor: settings.accentColor,
-                decoration: InputDecoration(
-                  hintText: "Enter new folder name",
-                  hintStyle: TextStyle(color: settings.dimTextColor),
-                  errorText: errorText,
-                  enabledBorder: UnderlineInputBorder(
-                    borderSide: BorderSide(color: settings.dimTextColor),
-                  ),
-                  focusedBorder: UnderlineInputBorder(
-                    borderSide: BorderSide(color: settings.accentColor),
+              // FIX: Wrapped TextField in a SizedBox to prevent horizontal stretching
+              content: SizedBox(
+                width: 400,
+                child: TextField(
+                  controller: controller,
+                  autofocus: true,
+                  onSubmitted: (_) => submit(),
+                  onChanged: (_) {
+                    if (errorText != null) setState(() => errorText = null);
+                  },
+                  style: TextStyle(color: settings.textColor),
+                  cursorColor: settings.accentColor,
+                  decoration: InputDecoration(
+                    hintText: "Enter new folder name",
+                    hintStyle: TextStyle(color: settings.dimTextColor),
+                    errorText: errorText,
+                    enabledBorder: UnderlineInputBorder(
+                      borderSide: BorderSide(color: settings.dimTextColor),
+                    ),
+                    focusedBorder: UnderlineInputBorder(
+                      borderSide: BorderSide(color: settings.accentColor),
+                    ),
                   ),
                 ),
               ),
@@ -143,7 +147,6 @@ class _LeftSidebarState extends State<LeftSidebar> {
 
   @override
   Widget build(BuildContext context) {
-    // Access dynamic settings
     final settings = SettingsService();
 
     return Container(
@@ -277,7 +280,7 @@ class _LeftSidebarState extends State<LeftSidebar> {
           Container(
             height: 35,
             padding: const EdgeInsets.symmetric(horizontal: 12),
-            color: settings.scaffoldColor, // Match Main BG for contrast
+            color: settings.scaffoldColor,
             child: Row(
               children: [
                 Icon(Icons.dns_outlined, size: 12, color: settings.accentColor),
