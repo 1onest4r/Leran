@@ -68,17 +68,35 @@ class _RightSidebarState extends State<RightSidebar> {
 
   void _showRenameDialog() {
     final settings = SettingsService();
-    final controller = TextEditingController(text: widget.title);
+
+    // Quality of life: Strip the extension from the text field so user just edits the base name
+    String baseName = widget.title;
+    if (baseName.endsWith('.md'))
+      baseName = baseName.substring(0, baseName.length - 3);
+    if (baseName.endsWith('.txt'))
+      baseName = baseName.substring(0, baseName.length - 4);
+
+    final controller = TextEditingController(text: baseName);
+
+    // Automatically select the text when dialog opens
+    controller.selection = TextSelection(
+      baseOffset: 0,
+      extentOffset: baseName.length,
+    );
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: settings.sidebarColor,
         title: Text("Rename", style: TextStyle(color: settings.textColor)),
+        // GUARANTEED FIX: This locks the width and prevents stretching
         content: SizedBox(
           width: 400,
           child: TextField(
             controller: controller,
+            autofocus: true,
             style: TextStyle(color: settings.textColor),
+            cursorColor: settings.accentColor,
             onSubmitted: (val) {
               if (val.isNotEmpty) widget.onRename(val);
               Navigator.pop(context);
@@ -237,7 +255,7 @@ class _RightSidebarState extends State<RightSidebar> {
                         child: TextField(
                           controller: _headerController,
                           readOnly: true,
-                          onTap: _showRenameDialog,
+                          onTap: _showRenameDialog, // Clicking Title
                           style: TextStyle(
                             fontSize: 32,
                             fontWeight: FontWeight.bold,
@@ -292,7 +310,8 @@ class _RightSidebarState extends State<RightSidebar> {
                       color: settings.sidebarColor,
                       onSelected: (val) {
                         if (val == 'save') widget.onManualSave();
-                        if (val == 'rename') _showRenameDialog();
+                        if (val == 'rename')
+                          _showRenameDialog(); // Hamburger Item
                         if (val == 'delete') widget.onDelete();
                         if (val == 'font_size') _showTextSizeDialog();
                       },
@@ -461,7 +480,6 @@ class _RightSidebarState extends State<RightSidebar> {
                                         shape: BoxShape.circle,
                                       ),
                                     )
-                                  // NEW: Using our custom hover-aware close button
                                   : _TabCloseButton(
                                       onTap: () => widget.onTabClosed(file),
                                     ),
@@ -481,7 +499,6 @@ class _RightSidebarState extends State<RightSidebar> {
   }
 }
 
-// --- NEW: Custom Hoverable Tab Close Button ---
 class _TabCloseButton extends StatefulWidget {
   final VoidCallback onTap;
 
@@ -498,7 +515,6 @@ class _TabCloseButtonState extends State<_TabCloseButton> {
   Widget build(BuildContext context) {
     final settings = SettingsService();
 
-    // Hover logic for dark/light themes
     Color hoverColor = settings.isDarkMode ? Colors.white : Colors.black;
     Color defaultColor = Colors.grey;
 
@@ -508,7 +524,6 @@ class _TabCloseButtonState extends State<_TabCloseButton> {
       child: GestureDetector(
         onTap: widget.onTap,
         child: Container(
-          // Adds a tiny bit of padding so it's easier to click
           padding: const EdgeInsets.all(2),
           child: Icon(
             Icons.close,

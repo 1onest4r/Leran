@@ -6,7 +6,7 @@ import 'package:file_picker/file_picker.dart';
 import '../services/file_service.dart';
 import '../services/settings_service.dart';
 import '../utils/app_dialogs.dart';
-import '../utils/search_dialog.dart'; // NEW IMPORT
+import '../utils/search_dialog.dart';
 import '../widgets/left_sidebar.dart';
 import '../widgets/right_sidebar.dart';
 
@@ -34,16 +34,12 @@ class _HomePageState extends State<HomePage> {
   }
 
   // --- ACTIONS ---
-
-  // NEW: Updated to use the custom pop-up dialog
   void _openSearch() async {
     if (_files.isEmpty) return;
 
     final FileSystemEntity? result = await showDialog<FileSystemEntity?>(
       context: context,
-      barrierColor: Colors.black.withOpacity(
-        0.4,
-      ), // Darken background slightly behind pop-up
+      barrierColor: Colors.black.withOpacity(0.4),
       builder: (context) => SearchDialog(files: _files),
     );
 
@@ -85,9 +81,7 @@ class _HomePageState extends State<HomePage> {
 
   void _handleContentChange(String newContent) {
     if (_selectedFile == null) return;
-
     _fileContent = newContent;
-
     if (SettingsService().autoSave) {
       _saveToDisk(_selectedFile!.path, newContent);
     } else {
@@ -100,7 +94,6 @@ class _HomePageState extends State<HomePage> {
   Future<void> _manualSave() async {
     if (_selectedFile != null) {
       final bool success = await _saveToDisk(_selectedFile!.path, _fileContent);
-
       if (success && mounted) {
         showDialog(
           context: context,
@@ -113,7 +106,6 @@ class _HomePageState extends State<HomePage> {
                 Navigator.of(dialogContext).pop();
               }
             });
-
             final settings = SettingsService();
             return AlertDialog(
               backgroundColor: settings.sidebarColor,
@@ -155,7 +147,6 @@ class _HomePageState extends State<HomePage> {
   Future<bool> _saveToDisk(String path, String content) async {
     try {
       await File(path).writeAsString(content, flush: true);
-
       if (mounted) setState(() => _unsavedPaths.remove(path));
       return true;
     } catch (e) {
@@ -171,7 +162,7 @@ class _HomePageState extends State<HomePage> {
               style: TextStyle(color: Colors.redAccent),
             ),
             content: Text(
-              "Could not save the file. Check folder permissions.\n\nError details: $e",
+              "Could not save the file.\n\nError details: $e",
               style: TextStyle(color: settings.textColor),
             ),
             actions: [
@@ -245,12 +236,110 @@ class _HomePageState extends State<HomePage> {
     });
   }
 
+  // --- NEW: Implemented File Rename Logic ---
   Future<void> _renameCurrentFile(String newName) async {
-    // Logic for rename would go here or call FileService
+    if (_selectedFile == null) return;
+
+    final oldPath = _selectedFile!.path;
+    final file = File(oldPath);
+
+    // Ensure it keeps the original extension if the user didn't type it
+    final String extension = oldPath.split('.').last;
+    if (!newName.endsWith('.$extension')) {
+      newName = '$newName.$extension';
+    }
+
+    final parentDir = file.parent.path;
+    final newPath = '$parentDir${Platform.pathSeparator}$newName';
+
+    try {
+      if (oldPath == newPath) return; // Name didn't change
+
+      // Prevent accidental overwrites
+      if (await File(newPath).exists()) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text("A file with that name already exists!"),
+              backgroundColor: Colors.redAccent,
+            ),
+          );
+        }
+        return;
+      }
+
+      final newFile = await file.rename(newPath);
+
+      setState(() {
+        _selectedFile = newFile;
+        _fileTitle = newName;
+
+        // Update the file in the sidebar list
+        final fileIndex = _files.indexWhere((f) => f.path == oldPath);
+        if (fileIndex != -1) _files[fileIndex] = newFile;
+        _files.sort(
+          (a, b) => a.path.toLowerCase().compareTo(b.path.toLowerCase()),
+        );
+
+        // Update the file in opened tabs
+        final tabIndex = _openedTabs.indexWhere((f) => f.path == oldPath);
+        if (tabIndex != -1) _openedTabs[tabIndex] = newFile;
+
+        // Carry over unsaved state to the new path
+        if (_unsavedPaths.contains(oldPath)) {
+          _unsavedPaths.remove(oldPath);
+          _unsavedPaths.add(newPath);
+        }
+      });
+    } catch (e) {
+      debugPrint("Rename failed: $e");
+    }
   }
 
+  // --- NEW: Implemented Folder Rename Logic ---
   Future<void> _handleFolderRename(String newName) async {
-    // Logic for folder rename would go here or call FileService
+    if (_selectedDirectory == null) return;
+    try {
+      final dir = Directory(_selectedDirectory!);
+      final parentPath = dir.parent.path;
+      final newPath = '$parentPath${Platform.pathSeparator}$newName';
+
+      if (await Directory(newPath).exists()) return;
+
+      final newDir = await dir.rename(newPath);
+
+      setState(() => _selectedDirectory = newDir.path);
+      await _refreshFileList();
+
+      // Update the active paths of all opened tabs so they don't break
+      setState(() {
+        _openedTabs = _openedTabs.map((f) {
+          final fileName = f.uri.pathSegments.lastWhere((s) => s.isNotEmpty);
+          return File('${newDir.path}${Platform.pathSeparator}$fileName');
+        }).toList();
+
+        if (_selectedFile != null) {
+          final fileName = _selectedFile!.uri.pathSegments.lastWhere(
+            (s) => s.isNotEmpty,
+          );
+          _selectedFile = File(
+            '${newDir.path}${Platform.pathSeparator}$fileName',
+          );
+        }
+
+        final newUnsaved = <String>{};
+        for (final p in _unsavedPaths) {
+          final fileName = p.split(Platform.pathSeparator).last;
+          newUnsaved.add('${newDir.path}${Platform.pathSeparator}$fileName');
+        }
+        _unsavedPaths.clear();
+        _unsavedPaths.addAll(newUnsaved);
+      });
+
+      _startWatching(newDir.path);
+    } catch (e) {
+      debugPrint("Folder rename failed: $e");
+    }
   }
 
   @override
