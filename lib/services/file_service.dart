@@ -31,13 +31,24 @@ class FileService {
   // 3. Create File
   static Future<void> createNote(String directoryPath, String fileName) async {
     if (!fileName.endsWith('.md') && !fileName.endsWith('.txt')) {
-      fileName = '$fileName.md';
+      fileName = '$fileName.txt';
     }
     final path = '$directoryPath${Platform.pathSeparator}$fileName';
     final file = File(path);
 
     if (!await file.exists()) {
-      await file.writeAsString("#Created on ${DateTime.now()}");
+      DateTime now = DateTime.now();
+
+      String twoDigits(int n) => n.toString().padLeft(2, '0');
+      String formatted =
+          "${now.year}-"
+          "${twoDigits(now.month)}-"
+          "${twoDigits(now.day)} "
+          "${twoDigits(now.hour)}:"
+          "${twoDigits(now.minute)}:"
+          "${twoDigits(now.second)}";
+
+      await file.writeAsString("#Created on $formatted");
     }
   }
 

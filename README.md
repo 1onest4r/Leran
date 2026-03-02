@@ -9,6 +9,7 @@ used external packages:
 -file_picker ^10.3.10
 
 TODO:
+fix in note taking section the cursor not moving into the blank space
 fix text in header not being saved
 fix the ui scaling issue in the settings
 change the font size option to numbering system
@@ -17,6 +18,6 @@ enable a feature where it asks for permission from user
 in note taking section add a feature for headers, line breaker and copying stylized text cleanly
 pick a proper color for better UX
 
-"=====stuff to remember"
+"=====stuff to remember====="
 -building ui must be faster than 16ms
 "======================"
