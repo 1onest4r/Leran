@@ -10,6 +10,13 @@ class StateManagement extends StatefulWidget {
 
 class _StateManagementState extends State<StateManagement> {
   final manager = StateManagementManager();
+
+  @override
+  void initState() {
+    super.initState();
+    manager.init();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -19,7 +26,7 @@ class _StateManagementState extends State<StateManagement> {
           children: [
             const SizedBox(height: 20.0),
             ValueListenableBuilder(
-              valueListenable: manager.colorIndexNotifier,
+              valueListenable: manager.colorNotifier,
               builder: (context, color, child) {
                 return Container(
                   color: color,

@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_demo/service/local_storage/local_storage.dart';
+import '../../service/service_locator.dart';
 
 class StateManagementManager {
   final List<MaterialAccentColor> boxColor = [
@@ -14,16 +16,24 @@ class StateManagementManager {
     Colors.limeAccent,
   ];
 
-  final colorIndexNotifier = ValueNotifier<Color>(Colors.yellowAccent);
+  final colorNotifier = ValueNotifier<Color>(Colors.yellowAccent);
   final numberNotifier = ValueNotifier<int>(0);
+  final localStorage = getIt<LocalStorage>();
 
   int _colorIndex = 0;
+
+  void init() {
+    final color = localStorage.getColor();
+    final number = localStorage.getNumber();
+    colorNotifier.value = color;
+    numberNotifier.value = number;
+  }
 
   void changeColor() {
     _colorIndex++;
     _colorIndex = _colorIndex % boxColor.length;
     final color = boxColor[_colorIndex];
-    colorIndexNotifier.value = color;
+    colorNotifier.value = color;
   }
 
   void changeText() {

@@ -1,10 +1,15 @@
 import 'package:flutter/material.dart';
-// Import the second file so we can navigate to it
+import 'package:flutter_demo/service/local_storage/local_storage.dart';
+import 'package:flutter_demo/service/service_locator.dart';
+
 import 'ui/1_dart/dart_demo_screen.dart';
 import 'ui/2_widgets_layout/widgets_layout_demo.dart';
 import 'ui/3_state_management/state_management.dart';
 
-void main() {
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  setupServiceLoader();
+  await getIt<LocalStorage>().init();
   runApp(const MyApp());
 }
 
