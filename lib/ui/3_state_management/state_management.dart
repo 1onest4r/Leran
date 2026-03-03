@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'state_management_manager.dart';
 
 class StateManagement extends StatefulWidget {
   const StateManagement({super.key});
@@ -8,25 +9,7 @@ class StateManagement extends StatefulWidget {
 }
 
 class _StateManagementState extends State<StateManagement> {
-  final List<MaterialAccentColor> boxColor = [
-    Colors.amberAccent,
-    Colors.blueAccent,
-    Colors.cyanAccent,
-    Colors.deepOrangeAccent,
-    Colors.deepPurpleAccent,
-    Colors.greenAccent,
-    Colors.indigoAccent,
-    Colors.lightBlueAccent,
-    Colors.lightGreenAccent,
-    Colors.limeAccent,
-  ];
-  //int colorIndex = 0;
-
-  //int number = 0;
-  final colorIndexNotifier = ValueNotifier(0);
-
-  final numberNotifier = ValueNotifier<int>(0);
-
+  final manager = StateManagementManager();
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -36,17 +19,17 @@ class _StateManagementState extends State<StateManagement> {
           children: [
             const SizedBox(height: 20.0),
             ValueListenableBuilder(
-              valueListenable: colorIndexNotifier,
-              builder: (context, colorIndex, child) {
+              valueListenable: manager.colorIndexNotifier,
+              builder: (context, color, child) {
                 return Container(
-                  color: boxColor[colorIndex],
+                  color: color,
                   width: 200,
                   height: 200,
                   child: Stack(
                     children: [
                       Center(
                         child: ValueListenableBuilder(
-                          valueListenable: numberNotifier,
+                          valueListenable: manager.numberNotifier,
                           builder: (context, number, child) {
                             return Text(
                               '$number',
@@ -66,14 +49,14 @@ class _StateManagementState extends State<StateManagement> {
             const SizedBox(height: 20.0),
             OutlinedButton(
               onPressed: () {
-                _changeColor();
+                manager.changeColor();
               },
               child: Text("Change color"),
             ),
             const SizedBox(height: 20.0),
             OutlinedButton(
               onPressed: () {
-                _changeText();
+                manager.changeText();
               },
               child: Text("Change Text"),
             ),
@@ -81,15 +64,5 @@ class _StateManagementState extends State<StateManagement> {
         ),
       ),
     );
-  }
-
-  void _changeColor() {
-    //rebuilds the whole ui
-    colorIndexNotifier.value++;
-    colorIndexNotifier.value = colorIndexNotifier.value % 10;
-  }
-
-  void _changeText() {
-    numberNotifier.value++;
   }
 }
