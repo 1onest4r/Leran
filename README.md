@@ -9,6 +9,8 @@ used external packages:
 -file_picker ^10.3.10
 
 TODO:
+remember to use database if loading/saving large stuffs but for small stuffs saving right away is fine
+
 fix in note taking section the cursor not moving into the blank space
 fix text in header not being saved
 fix the ui scaling issue in the settings
