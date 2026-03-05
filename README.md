@@ -11,6 +11,7 @@ used external packages:
 TODO:
 remember to use database if loading/saving large stuffs but for small stuffs saving right away is fine
 
+fix the workflow of the current file with UI, LOGIC, SERVICE (for better life)
 fix in note taking section the cursor not moving into the blank space
 fix text in header not being saved
 fix the ui scaling issue in the settings
