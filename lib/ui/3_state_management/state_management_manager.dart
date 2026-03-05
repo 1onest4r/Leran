@@ -34,9 +34,15 @@ class StateManagementManager {
     _colorIndex = _colorIndex % boxColor.length;
     final color = boxColor[_colorIndex];
     colorNotifier.value = color;
+
+    //save the color as soon as user changes the color
+    localStorage.setColor(color);
   }
 
   void changeText() {
     numberNotifier.value++;
+
+    //save the number as soon as user changes the color
+    localStorage.setNumber(numberNotifier.value);
   }
 }
