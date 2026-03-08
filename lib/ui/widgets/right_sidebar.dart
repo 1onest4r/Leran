@@ -1,43 +1,19 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/gestures.dart';
-import '../services/settings_service.dart';
 
+import '../../logic/vault_controller.dart';
+import '../../services/settings_service.dart';
+import '../utils/app_dialogs.dart';
+
+/// UI LAYER: The Markdown Text Editor and Tabs.
 class RightSidebar extends StatefulWidget {
-  final String title;
-  final String content;
-  final List<FileSystemEntity> openedTabs;
-  final FileSystemEntity activeTab;
-  final Set<String> unsavedPaths;
-
-  final Function(FileSystemEntity) onTabSelected;
-  final Function(FileSystemEntity) onTabClosed;
-  final Function(String) onContentChanged;
-  final VoidCallback onManualSave;
-  final Function() onDelete;
-  final Function(String) onRename;
-
-  const RightSidebar({
-    super.key,
-    required this.title,
-    required this.content,
-    required this.openedTabs,
-    required this.activeTab,
-    required this.unsavedPaths,
-    required this.onTabSelected,
-    required this.onTabClosed,
-    required this.onContentChanged,
-    required this.onManualSave,
-    required this.onDelete,
-    required this.onRename,
-  });
+  const RightSidebar({super.key});
 
   @override
   State<RightSidebar> createState() => _RightSidebarState();
 }
 
 class _RightSidebarState extends State<RightSidebar> {
-  // RESTORED: The header controller
   late TextEditingController _headerController;
   late SyntaxHighlightingController _bodyController;
   late ScrollController _tabScrollController;
@@ -45,9 +21,11 @@ class _RightSidebarState extends State<RightSidebar> {
   @override
   void initState() {
     super.initState();
-    // Starts empty so it shows the placeholder instead of the file name
+    final vault = VaultController();
+
     _headerController = TextEditingController();
-    _bodyController = SyntaxHighlightingController(text: widget.content);
+    // Sets initial text safely from the brain layer
+    _bodyController = SyntaxHighlightingController(text: vault.fileContent);
     _tabScrollController = ScrollController();
   }
 
@@ -59,20 +37,12 @@ class _RightSidebarState extends State<RightSidebar> {
     super.dispose();
   }
 
-  @override
-  void didUpdateWidget(covariant RightSidebar oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.activeTab.path != widget.activeTab.path) {
-      _headerController.clear(); // Clear the custom title when switching tabs
-      _bodyController.text = widget.content;
-    }
-  }
-
   void _showRenameDialog() {
     final settings = SettingsService();
+    final vault = VaultController();
+    if (vault.activeFile == null) return;
 
-    // Strip the extension from the text field so user just edits the base name
-    String baseName = widget.title;
+    String baseName = vault.activeFile!.uri.pathSegments.last;
     if (baseName.endsWith('.md'))
       baseName = baseName.substring(0, baseName.length - 3);
     if (baseName.endsWith('.txt'))
@@ -96,9 +66,16 @@ class _RightSidebarState extends State<RightSidebar> {
             autofocus: true,
             style: TextStyle(color: settings.textColor),
             cursorColor: settings.accentColor,
-            onSubmitted: (val) {
-              if (val.isNotEmpty) widget.onRename(val);
-              Navigator.pop(context);
+            onSubmitted: (val) async {
+              if (val.isNotEmpty) {
+                final success = await vault.renameActiveNote(val);
+                if (!success && context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text("Name exists or invalid.")),
+                  );
+                }
+              }
+              if (context.mounted) Navigator.pop(context);
             },
             decoration: InputDecoration(
               focusedBorder: UnderlineInputBorder(
@@ -116,9 +93,10 @@ class _RightSidebarState extends State<RightSidebar> {
             ),
           ),
           TextButton(
-            onPressed: () {
-              if (controller.text.isNotEmpty) widget.onRename(controller.text);
-              Navigator.pop(context);
+            onPressed: () async {
+              if (controller.text.isNotEmpty)
+                await vault.renameActiveNote(controller.text);
+              if (context.mounted) Navigator.pop(context);
             },
             child: Text(
               "Rename",
@@ -128,6 +106,70 @@ class _RightSidebarState extends State<RightSidebar> {
         ],
       ),
     );
+  }
+
+  void _manualSave() async {
+    final vault = VaultController();
+    final success = await vault.saveActiveNote();
+
+    if (success && mounted) {
+      final settings = SettingsService();
+      showDialog(
+        context: context,
+        barrierColor: Colors.black12,
+        barrierDismissible: false,
+        builder: (BuildContext dialogContext) {
+          Future.delayed(const Duration(milliseconds: 1500), () {
+            if (dialogContext.mounted && Navigator.of(dialogContext).canPop()) {
+              Navigator.of(dialogContext).pop();
+            }
+          });
+          return AlertDialog(
+            backgroundColor: settings.sidebarColor,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+              side: BorderSide(color: settings.dividerColor),
+            ),
+            contentPadding: const EdgeInsets.symmetric(
+              vertical: 20,
+              horizontal: 24,
+            ),
+            content: Row(
+              mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.check_circle_outline,
+                  color: settings.accentColor,
+                  size: 28,
+                ),
+                const SizedBox(width: 12),
+                Text(
+                  "File Saved!",
+                  style: TextStyle(
+                    color: settings.textColor,
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+      );
+    } else if (!success && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Save failed. Check permissions."),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  void _deleteCurrent() async {
+    final confirm = await AppDialogs.showDeleteConfirmation(context);
+    if (confirm) VaultController().deleteActiveNote();
   }
 
   void _showTextSizeDialog() {
@@ -145,9 +187,7 @@ class _RightSidebarState extends State<RightSidebar> {
               if (newSize < 10) newSize = 10;
               if (newSize > 48) newSize = 48;
               settings.setFontSize(newSize);
-              setState(() {
-                controller.text = newSize.toInt().toString();
-              });
+              setState(() => controller.text = newSize.toInt().toString());
             }
 
             return AlertDialog(
@@ -189,15 +229,14 @@ class _RightSidebarState extends State<RightSidebar> {
                       ),
                       onSubmitted: (val) {
                         final parsed = double.tryParse(val);
-                        if (parsed != null) {
+                        if (parsed != null)
                           updateSize(parsed);
-                        } else {
-                          setState(() {
-                            controller.text = settings.fontSize
+                        else
+                          setState(
+                            () => controller.text = settings.fontSize
                                 .toInt()
-                                .toString();
-                          });
-                        }
+                                .toString(),
+                          );
                       },
                     ),
                   ),
@@ -230,9 +269,10 @@ class _RightSidebarState extends State<RightSidebar> {
   @override
   Widget build(BuildContext context) {
     final settings = SettingsService();
+    final vault = VaultController();
 
     return AnimatedBuilder(
-      animation: settings,
+      animation: Listenable.merge([settings, vault]),
       builder: (context, child) {
         final TextStyle editorStyle = TextStyle(
           fontSize: settings.fontSize,
@@ -248,12 +288,11 @@ class _RightSidebarState extends State<RightSidebar> {
                 children: [
                   Column(
                     children: [
-                      // RESTORED: HEADER
+                      // HEADER
                       Container(
                         padding: const EdgeInsets.fromLTRB(40, 40, 80, 10),
                         child: TextField(
                           controller: _headerController,
-                          // No longer readOnly, user can type here freely!
                           style: TextStyle(
                             fontSize: 32,
                             fontWeight: FontWeight.bold,
@@ -282,14 +321,14 @@ class _RightSidebarState extends State<RightSidebar> {
                           ),
                         ),
                       ),
-
                       // BODY
                       Expanded(
                         child: Container(
                           padding: const EdgeInsets.symmetric(horizontal: 40),
                           child: TextField(
                             controller: _bodyController,
-                            onChanged: widget.onContentChanged,
+                            // Tells the Brain layer we typed something!
+                            onChanged: (val) => vault.updateContent(val),
                             style: editorStyle,
                             maxLines: null,
                             expands: true,
@@ -317,9 +356,9 @@ class _RightSidebarState extends State<RightSidebar> {
                       icon: Icon(Icons.menu, color: settings.textColor),
                       color: settings.sidebarColor,
                       onSelected: (val) {
-                        if (val == 'save') widget.onManualSave();
+                        if (val == 'save') _manualSave();
                         if (val == 'rename') _showRenameDialog();
-                        if (val == 'delete') widget.onDelete();
+                        if (val == 'delete') _deleteCurrent();
                         if (val == 'font_size') _showTextSizeDialog();
                       },
                       itemBuilder: (context) => [
@@ -419,17 +458,20 @@ class _RightSidebarState extends State<RightSidebar> {
                   child: ListView.builder(
                     controller: _tabScrollController,
                     scrollDirection: Axis.horizontal,
-                    itemCount: widget.openedTabs.length,
+                    itemCount: vault.openedTabs.length,
                     itemBuilder: (context, index) {
-                      final file = widget.openedTabs[index];
+                      final file = vault.openedTabs[index];
                       final fileName = file.uri.pathSegments.lastWhere(
                         (s) => s.isNotEmpty,
                       );
-                      final isActive = file.path == widget.activeTab.path;
-                      final isUnsaved = widget.unsavedPaths.contains(file.path);
+                      final isActive =
+                          vault.activeFile != null &&
+                          file.path == vault.activeFile!.path;
+                      final isUnsaved = vault.unsavedPaths.contains(file.path);
 
                       return InkWell(
-                        onTap: () => widget.onTabSelected(file),
+                        onTap: () =>
+                            vault.openFile(file), // Tell Brain to switch tabs
                         child: Container(
                           padding: const EdgeInsets.symmetric(horizontal: 15),
                           alignment: Alignment.center,
@@ -488,8 +530,8 @@ class _RightSidebarState extends State<RightSidebar> {
                                       ),
                                     )
                                   : _TabCloseButton(
-                                      onTap: () => widget.onTabClosed(file),
-                                    ),
+                                      onTap: () => vault.closeTab(file),
+                                    ), // Tell Brain to close tab
                             ],
                           ),
                         ),
@@ -508,23 +550,18 @@ class _RightSidebarState extends State<RightSidebar> {
 
 class _TabCloseButton extends StatefulWidget {
   final VoidCallback onTap;
-
   const _TabCloseButton({required this.onTap});
-
   @override
   State<_TabCloseButton> createState() => _TabCloseButtonState();
 }
 
 class _TabCloseButtonState extends State<_TabCloseButton> {
   bool _isHovering = false;
-
   @override
   Widget build(BuildContext context) {
     final settings = SettingsService();
-
     Color hoverColor = settings.isDarkMode ? Colors.white : Colors.black;
     Color defaultColor = Colors.grey;
-
     return MouseRegion(
       onEnter: (_) => setState(() => _isHovering = true),
       onExit: (_) => setState(() => _isHovering = false),

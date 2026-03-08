@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+/// SERVICE LAYER: User Preferences.
+/// Handles saving and retrieving settings like Dark Mode and UI scaling from disk.
 class SettingsService extends ChangeNotifier {
   static final SettingsService _instance = SettingsService._internal();
   factory SettingsService() => _instance;
@@ -8,21 +10,18 @@ class SettingsService extends ChangeNotifier {
 
   late SharedPreferences _prefs;
 
-  // Defaults
   bool _isDarkMode = true;
   bool _autoSave = false;
   double _fontSize = 16.0;
-  double _uiScale = 1.0; // NEW: UI Scaling
+  double _uiScale = 1.0;
   String _fontFamily = 'Courier';
 
-  // Getters
   bool get isDarkMode => _isDarkMode;
   bool get autoSave => _autoSave;
   double get fontSize => _fontSize;
   double get uiScale => _uiScale;
   String get fontFamily => _fontFamily;
 
-  // Colors based on Theme
   Color get scaffoldColor =>
       _isDarkMode ? const Color(0xFF1E1E1E) : const Color(0xFFF5F5F5);
   Color get sidebarColor =>
@@ -54,16 +53,14 @@ class SettingsService extends ChangeNotifier {
     notifyListeners();
   }
 
-  // Adjusted clamp to allow larger sizes since controls are now easier to access
   Future<void> setFontSize(double size) async {
     _fontSize = size.clamp(10.0, 48.0);
     await _prefs.setDouble('fontSize', _fontSize);
     notifyListeners();
   }
 
-  // NEW: UI Scaling Logic
   Future<void> setUiScale(double scale) async {
-    _uiScale = scale.clamp(0.8, 1.5); // Limit between 80% and 150%
+    _uiScale = scale.clamp(0.8, 1.5);
     await _prefs.setDouble('uiScale', _uiScale);
     notifyListeners();
   }

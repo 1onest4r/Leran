@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import '../services/settings_service.dart';
+import '../../services/settings_service.dart';
 
+/// UI LAYER: Reusable Popups
 class AppDialogs {
-  // 1. SETTINGS DIALOG
   static void showSettings(BuildContext context) {
     final settings = SettingsService();
 
@@ -23,7 +23,6 @@ class AppDialogs {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    // Theme
                     SwitchListTile(
                       title: Text(
                         "Dark Mode",
@@ -33,7 +32,6 @@ class AppDialogs {
                       activeColor: settings.accentColor,
                       onChanged: (val) => settings.toggleTheme(val),
                     ),
-                    // Auto-Save
                     SwitchListTile(
                       title: Text(
                         "Auto Save",
@@ -50,10 +48,7 @@ class AppDialogs {
                       activeColor: settings.accentColor,
                       onChanged: (val) => settings.toggleAutoSave(val),
                     ),
-
                     Divider(color: settings.dividerColor),
-
-                    // UI Scaling Slider
                     Padding(
                       padding: const EdgeInsets.symmetric(vertical: 8.0),
                       child: Column(
@@ -96,7 +91,6 @@ class AppDialogs {
     );
   }
 
-  // 2. NEW NOTE DIALOG
   static Future<String?> showNewNoteDialog(BuildContext context) async {
     final TextEditingController controller = TextEditingController();
     final RegExp invalidChars = RegExp(r'[<>:"/\\|?*]');
@@ -124,7 +118,6 @@ class AppDialogs {
                 "New Note",
                 style: TextStyle(color: settings.textColor),
               ),
-              // FIX: Wrapped TextField in a SizedBox to prevent horizontal stretching
               content: SizedBox(
                 width: 400,
                 child: TextField(
@@ -172,7 +165,6 @@ class AppDialogs {
     );
   }
 
-  // 3. DELETE CONFIRMATION
   static Future<bool> showDeleteConfirmation(BuildContext context) async {
     final settings = SettingsService();
     return await showDialog<bool>(

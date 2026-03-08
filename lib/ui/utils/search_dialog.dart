@@ -1,7 +1,8 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
-import '../services/settings_service.dart';
+import '../../services/settings_service.dart';
 
+/// UI LAYER: Command Palette
 class SearchDialog extends StatefulWidget {
   final List<FileSystemEntity> files;
 
@@ -29,10 +30,8 @@ class _SearchDialogState extends State<SearchDialog> {
 
   @override
   Widget build(BuildContext context) {
-    // Listen to our settings for accurate Light/Dark mode colors
     final settings = SettingsService();
 
-    // Filter files based on search text
     final suggestions = widget.files.where((file) {
       final name = file.uri.pathSegments.last.toLowerCase();
       return name.contains(_query.toLowerCase());
@@ -45,12 +44,11 @@ class _SearchDialogState extends State<SearchDialog> {
         side: BorderSide(color: settings.dividerColor, width: 1),
       ),
       child: Container(
-        width: 500, // Fixed width so it looks like a command palette
+        width: 500,
         constraints: const BoxConstraints(maxHeight: 450),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // --- SEARCH INPUT ---
             Padding(
               padding: const EdgeInsets.all(16.0),
               child: TextField(
@@ -74,7 +72,7 @@ class _SearchDialogState extends State<SearchDialog> {
                         )
                       : null,
                   filled: true,
-                  fillColor: settings.scaffoldColor, // Contrasts nicely
+                  fillColor: settings.scaffoldColor,
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(8),
                     borderSide: BorderSide.none,
@@ -87,17 +85,10 @@ class _SearchDialogState extends State<SearchDialog> {
                     ),
                   ),
                 ),
-                onChanged: (val) {
-                  setState(() {
-                    _query = val;
-                  });
-                },
+                onChanged: (val) => setState(() => _query = val),
               ),
             ),
-
             Divider(color: settings.dividerColor, height: 1),
-
-            // --- SEARCH RESULTS ---
             Expanded(
               child: suggestions.isEmpty
                   ? Center(
@@ -111,7 +102,6 @@ class _SearchDialogState extends State<SearchDialog> {
                       itemBuilder: (context, index) {
                         final file = suggestions[index];
                         final name = file.uri.pathSegments.last;
-
                         return ListTile(
                           contentPadding: const EdgeInsets.symmetric(
                             horizontal: 24,
@@ -126,10 +116,7 @@ class _SearchDialogState extends State<SearchDialog> {
                             style: TextStyle(color: settings.textColor),
                           ),
                           hoverColor: settings.accentColor.withOpacity(0.1),
-                          onTap: () {
-                            // Return the selected file back to the home page
-                            Navigator.pop(context, file);
-                          },
+                          onTap: () => Navigator.pop(context, file),
                         );
                       },
                     ),
