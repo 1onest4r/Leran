@@ -4,10 +4,7 @@ import 'ui/screens/home_page.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
-  // Initialize the Settings Service before the app starts
   await SettingsService().loadSettings();
-
   runApp(const NoteApp());
 }
 
@@ -16,8 +13,6 @@ class NoteApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // We listen to SettingsService here so the whole app rebuilds
-    // if Dark Mode or UI Scale changes.
     return AnimatedBuilder(
       animation: SettingsService(),
       builder: (context, child) {
@@ -27,8 +22,8 @@ class NoteApp extends StatelessWidget {
           debugShowCheckedModeBanner: false,
           title: 'Digital Garden',
           theme: settings.isDarkMode ? ThemeData.dark() : ThemeData.light(),
-          // Applies global UI scaling based on user settings
           builder: (context, child) {
+            // Apply text scaling globally
             return MediaQuery(
               data: MediaQuery.of(
                 context,

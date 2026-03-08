@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-/// SERVICE LAYER: User Preferences.
-/// Handles saving and retrieving settings like Dark Mode and UI scaling from disk.
 class SettingsService extends ChangeNotifier {
   static final SettingsService _instance = SettingsService._internal();
   factory SettingsService() => _instance;

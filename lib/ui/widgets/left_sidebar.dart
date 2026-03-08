@@ -1,16 +1,13 @@
 import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
-
 import '../../logic/vault_controller.dart';
 import '../../services/settings_service.dart';
 import '../utils/app_dialogs.dart';
 import '../utils/search_dialog.dart';
 
-/// UI LAYER: The Explorer View.
 class LeftSidebar extends StatefulWidget {
   const LeftSidebar({super.key});
-
   @override
   State<LeftSidebar> createState() => _LeftSidebarState();
 }
@@ -66,12 +63,13 @@ class _LeftSidebarState extends State<LeftSidebar> {
 
   void _showRenameDialog(BuildContext context) {
     final vault = VaultController();
+    final settings = SettingsService();
+    final scale = settings.uiScale;
     final String currentName = vault.selectedDirectory!
         .split(Platform.pathSeparator)
         .last;
     final controller = TextEditingController(text: currentName);
     final RegExp invalidChars = RegExp(r'[<>:"/\\|?*]');
-    final settings = SettingsService();
 
     showDialog(
       context: context,
@@ -97,7 +95,7 @@ class _LeftSidebarState extends State<LeftSidebar> {
                 style: TextStyle(color: settings.textColor),
               ),
               content: SizedBox(
-                width: 400,
+                width: 400 * scale,
                 child: TextField(
                   controller: controller,
                   autofocus: true,
@@ -147,6 +145,7 @@ class _LeftSidebarState extends State<LeftSidebar> {
   Widget build(BuildContext context) {
     final settings = SettingsService();
     final vault = VaultController();
+    final scale = settings.uiScale;
 
     return AnimatedBuilder(
       animation: vault,
@@ -156,11 +155,11 @@ class _LeftSidebarState extends State<LeftSidebar> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // --- TOP ICONS ---
+              // --- TOP CONTROLS TRAY---
               Container(
-                padding: const EdgeInsets.symmetric(
-                  vertical: 10,
-                  horizontal: 8,
+                padding: EdgeInsets.symmetric(
+                  vertical: 10 * scale,
+                  horizontal: 8 * scale,
                 ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -169,24 +168,28 @@ class _LeftSidebarState extends State<LeftSidebar> {
                       Icons.add_box_outlined,
                       settings.accentColor,
                       "New Note",
+                      scale,
                       onTap: () => _createNewNote(context),
                     ),
                     _iconBtn(
                       Icons.search,
                       settings.dimTextColor,
                       "Search",
+                      scale,
                       onTap: () => _openSearch(context),
                     ),
                     _iconBtn(
                       Icons.hub_outlined,
                       settings.dimTextColor,
                       "Graph View",
+                      scale,
                       onTap: () {},
                     ),
                     _iconBtn(
                       Icons.settings_outlined,
                       settings.dimTextColor,
                       "Settings",
+                      scale,
                       onTap: () => AppDialogs.showSettings(context),
                     ),
                   ],
@@ -195,13 +198,17 @@ class _LeftSidebarState extends State<LeftSidebar> {
 
               Divider(color: settings.dividerColor, height: 1),
 
-              // --- FILE LIST ---
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                      padding: EdgeInsets.fromLTRB(
+                        16 * scale,
+                        16 * scale,
+                        16 * scale,
+                        8 * scale,
+                      ),
                       child: Text(
                         "EXPLORER",
                         style: TextStyle(
@@ -242,14 +249,14 @@ class _LeftSidebarState extends State<LeftSidebar> {
                                     visualDensity: const VisualDensity(
                                       vertical: -3,
                                     ),
-                                    contentPadding: const EdgeInsets.symmetric(
-                                      horizontal: 16,
+                                    contentPadding: EdgeInsets.symmetric(
+                                      horizontal: 16 * scale,
                                     ),
                                     leading: Icon(
                                       isActive
                                           ? Icons.edit_document
                                           : Icons.description_outlined,
-                                      size: 16,
+                                      size: 16 * scale,
                                       color: isActive
                                           ? settings.accentColor
                                           : settings.dimTextColor,
@@ -281,19 +288,19 @@ class _LeftSidebarState extends State<LeftSidebar> {
 
               Divider(color: settings.dividerColor, height: 1),
 
-              // --- LIVE FOOTER ---
+              // STATUS BOTTOM BOARD
               Container(
-                height: 35,
-                padding: const EdgeInsets.symmetric(horizontal: 12),
+                height: 35 * scale,
+                padding: EdgeInsets.symmetric(horizontal: 12 * scale),
                 color: settings.scaffoldColor,
                 child: Row(
                   children: [
                     Icon(
                       Icons.dns_outlined,
-                      size: 12,
+                      size: 12 * scale,
                       color: settings.accentColor,
                     ),
-                    const SizedBox(width: 8),
+                    SizedBox(width: 8 * scale),
                     Expanded(
                       child: InkWell(
                         onTap: () => _showRenameDialog(context),
@@ -313,17 +320,17 @@ class _LeftSidebarState extends State<LeftSidebar> {
                         ),
                       ),
                     ),
-                    const SizedBox(width: 8),
+                    SizedBox(width: 8 * scale),
                     Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 6,
-                        vertical: 2,
+                      padding: EdgeInsets.symmetric(
+                        horizontal: 6 * scale,
+                        vertical: 2 * scale,
                       ),
                       decoration: BoxDecoration(
                         color: settings.isDarkMode
                             ? Colors.black26
                             : Colors.black12,
-                        borderRadius: BorderRadius.circular(4),
+                        borderRadius: BorderRadius.circular(4 * scale),
                       ),
                       child: Text(
                         _formatDuration(_sessionDuration),
@@ -348,13 +355,14 @@ class _LeftSidebarState extends State<LeftSidebar> {
   Widget _iconBtn(
     IconData icon,
     Color color,
-    String tooltip, {
+    String tooltip,
+    double scale, {
     required VoidCallback onTap,
   }) {
     return IconButton(
-      icon: Icon(icon, color: color, size: 20),
+      icon: Icon(icon, color: color, size: 20 * scale),
       tooltip: tooltip,
-      splashRadius: 20,
+      splashRadius: 20 * scale,
       constraints: const BoxConstraints(),
       padding: EdgeInsets.zero,
       onPressed: onTap,

@@ -1,8 +1,5 @@
 import 'dart:io';
 
-/// SERVICE LAYER: Disk Operations.
-/// A pure service class. It does not store variables or app state.
-/// It simply takes inputs and processes files on the hard drive.
 class FileService {
   static Future<List<FileSystemEntity>> getNotesFromPath(
     String directoryPath,
@@ -37,13 +34,13 @@ class FileService {
 
     if (!await file.exists()) {
       DateTime now = DateTime.now();
-
       String twoDigits(int n) => n.toString().padLeft(2, '0');
       String formatted =
           "${now.year}-${twoDigits(now.month)}-${twoDigits(now.day)} "
           "${twoDigits(now.hour)}:${twoDigits(now.minute)}:${twoDigits(now.second)}";
 
-      await file.writeAsString("#Created on $formatted");
+      // Makes sure standard newly created formats parse right on first lines natively
+      await file.writeAsString("$fileName\nCreated on $formatted");
     }
   }
 
@@ -51,7 +48,6 @@ class FileService {
     final dir = Directory(oldPath);
     final parentPath = dir.parent.path;
     final newPath = '$parentPath${Platform.pathSeparator}$newName';
-
     await dir.rename(newPath);
     return newPath;
   }

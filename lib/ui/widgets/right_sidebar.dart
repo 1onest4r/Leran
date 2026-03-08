@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/gestures.dart';
-
 import '../../logic/vault_controller.dart';
 import '../../services/settings_service.dart';
 import '../utils/app_dialogs.dart';
 
-/// UI LAYER: The Markdown Text Editor and Tabs.
 class RightSidebar extends StatefulWidget {
   const RightSidebar({super.key});
 
@@ -23,9 +21,25 @@ class _RightSidebarState extends State<RightSidebar> {
     super.initState();
     final vault = VaultController();
 
-    _headerController = TextEditingController();
-    // Sets initial text safely from the brain layer
-    _bodyController = SyntaxHighlightingController(text: vault.fileContent);
+    // NEW MAGIC PARSING: Break files physically to Header AND Body boxes natively
+    final content = vault.fileContent;
+    final int nlIndex = content.indexOf('\n');
+    String headText = "";
+    String bodyText = "";
+
+    if (content.isEmpty) {
+      headText = "";
+      bodyText = "";
+    } else if (nlIndex == -1) {
+      headText = content;
+      bodyText = "";
+    } else {
+      headText = content.substring(0, nlIndex);
+      bodyText = content.substring(nlIndex + 1);
+    }
+
+    _headerController = TextEditingController(text: headText);
+    _bodyController = SyntaxHighlightingController(text: bodyText);
     _tabScrollController = ScrollController();
   }
 
@@ -37,10 +51,18 @@ class _RightSidebarState extends State<RightSidebar> {
     super.dispose();
   }
 
+  void _notifyMergedContent() {
+    // Take changes individually via respective keys updating Vault Logic naturally back into saving line!
+    final vault = VaultController();
+    final String merged = "${_headerController.text}\n${_bodyController.text}";
+    vault.updateContent(merged);
+  }
+
   void _showRenameDialog() {
     final settings = SettingsService();
     final vault = VaultController();
     if (vault.activeFile == null) return;
+    final scale = settings.uiScale;
 
     String baseName = vault.activeFile!.uri.pathSegments.last;
     if (baseName.endsWith('.md'))
@@ -60,7 +82,7 @@ class _RightSidebarState extends State<RightSidebar> {
         backgroundColor: settings.sidebarColor,
         title: Text("Rename File", style: TextStyle(color: settings.textColor)),
         content: SizedBox(
-          width: 400,
+          width: 400 * scale,
           child: TextField(
             controller: controller,
             autofocus: true,
@@ -111,6 +133,7 @@ class _RightSidebarState extends State<RightSidebar> {
   void _manualSave() async {
     final vault = VaultController();
     final success = await vault.saveActiveNote();
+    final scale = SettingsService().uiScale;
 
     if (success && mounted) {
       final settings = SettingsService();
@@ -130,9 +153,9 @@ class _RightSidebarState extends State<RightSidebar> {
               borderRadius: BorderRadius.circular(12),
               side: BorderSide(color: settings.dividerColor),
             ),
-            contentPadding: const EdgeInsets.symmetric(
-              vertical: 20,
-              horizontal: 24,
+            contentPadding: EdgeInsets.symmetric(
+              vertical: 20 * scale,
+              horizontal: 24 * scale,
             ),
             content: Row(
               mainAxisSize: MainAxisSize.min,
@@ -141,9 +164,9 @@ class _RightSidebarState extends State<RightSidebar> {
                 Icon(
                   Icons.check_circle_outline,
                   color: settings.accentColor,
-                  size: 28,
+                  size: 28 * scale,
                 ),
-                const SizedBox(width: 12),
+                SizedBox(width: 12 * scale),
                 Text(
                   "File Saved!",
                   style: TextStyle(
@@ -174,6 +197,7 @@ class _RightSidebarState extends State<RightSidebar> {
 
   void _showTextSizeDialog() {
     final settings = SettingsService();
+    final scale = settings.uiScale;
     final TextEditingController controller = TextEditingController(
       text: settings.fontSize.toInt().toString(),
     );
@@ -204,12 +228,12 @@ class _RightSidebarState extends State<RightSidebar> {
                     icon: Icon(
                       Icons.chevron_left,
                       color: settings.dimTextColor,
-                      size: 30,
+                      size: 30 * scale,
                     ),
                     onPressed: () => updateSize(settings.fontSize - 1),
                   ),
                   SizedBox(
-                    width: 60,
+                    width: 60 * scale,
                     child: TextField(
                       controller: controller,
                       keyboardType: TextInputType.number,
@@ -244,7 +268,7 @@ class _RightSidebarState extends State<RightSidebar> {
                     icon: Icon(
                       Icons.chevron_right,
                       color: settings.dimTextColor,
-                      size: 30,
+                      size: 30 * scale,
                     ),
                     onPressed: () => updateSize(settings.fontSize + 1),
                   ),
@@ -270,6 +294,8 @@ class _RightSidebarState extends State<RightSidebar> {
   Widget build(BuildContext context) {
     final settings = SettingsService();
     final vault = VaultController();
+    final scale =
+        settings.uiScale; // Applied dynamic multiplier to everything bounds!
 
     return AnimatedBuilder(
       animation: Listenable.merge([settings, vault]),
@@ -288,11 +314,18 @@ class _RightSidebarState extends State<RightSidebar> {
                 children: [
                   Column(
                     children: [
-                      // HEADER
+                      // ACTUAL SEPARATED TITLE FILE MAPPING  (No longer meaningless formatting placeholder)
                       Container(
-                        padding: const EdgeInsets.fromLTRB(40, 40, 80, 10),
+                        padding: EdgeInsets.fromLTRB(
+                          40 * scale,
+                          40 * scale,
+                          80 * scale,
+                          10 * scale,
+                        ),
                         child: TextField(
                           controller: _headerController,
+                          onChanged: (_) =>
+                              _notifyMergedContent(), // Saves title modification straight mapping lines inside content hooks
                           style: TextStyle(
                             fontSize: 32,
                             fontWeight: FontWeight.bold,
@@ -321,14 +354,13 @@ class _RightSidebarState extends State<RightSidebar> {
                           ),
                         ),
                       ),
-                      // BODY
+                      // MAIN PARSING LOWER EDIT FRAME
                       Expanded(
                         child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 40),
+                          padding: EdgeInsets.symmetric(horizontal: 40 * scale),
                           child: TextField(
                             controller: _bodyController,
-                            // Tells the Brain layer we typed something!
-                            onChanged: (val) => vault.updateContent(val),
+                            onChanged: (_) => _notifyMergedContent(),
                             style: editorStyle,
                             maxLines: null,
                             expands: true,
@@ -348,12 +380,16 @@ class _RightSidebarState extends State<RightSidebar> {
                     ],
                   ),
 
-                  // HAMBURGER MENU
+                  // HAMBURGER
                   Positioned(
-                    top: 20,
-                    right: 20,
+                    top: 20 * scale,
+                    right: 20 * scale,
                     child: PopupMenuButton<String>(
-                      icon: Icon(Icons.menu, color: settings.textColor),
+                      icon: Icon(
+                        Icons.menu,
+                        color: settings.textColor,
+                        size: 24 * scale,
+                      ),
                       color: settings.sidebarColor,
                       onSelected: (val) {
                         if (val == 'save') _manualSave();
@@ -426,9 +462,9 @@ class _RightSidebarState extends State<RightSidebar> {
               ),
             ),
 
-            // BOTTOM TABS
+            // BOTTOM TABS TRAY LAYOUT
             Container(
-              height: 36,
+              height: 36 * scale,
               width: double.infinity,
               decoration: BoxDecoration(
                 color: settings.sidebarColor,
@@ -470,10 +506,9 @@ class _RightSidebarState extends State<RightSidebar> {
                       final isUnsaved = vault.unsavedPaths.contains(file.path);
 
                       return InkWell(
-                        onTap: () =>
-                            vault.openFile(file), // Tell Brain to switch tabs
+                        onTap: () => vault.openFile(file),
                         child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 15),
+                          padding: EdgeInsets.symmetric(horizontal: 15 * scale),
                           alignment: Alignment.center,
                           decoration: BoxDecoration(
                             color: isActive
@@ -482,12 +517,12 @@ class _RightSidebarState extends State<RightSidebar> {
                             border: Border(
                               right: BorderSide(
                                 color: settings.dividerColor,
-                                width: 0.5,
+                                width: 0.5 * scale,
                               ),
                               top: isActive
                                   ? BorderSide(
                                       color: settings.accentColor,
-                                      width: 2,
+                                      width: 2 * scale,
                                     )
                                   : BorderSide.none,
                             ),
@@ -497,15 +532,15 @@ class _RightSidebarState extends State<RightSidebar> {
                             children: [
                               Icon(
                                 Icons.description,
-                                size: 14,
+                                size: 14 * scale,
                                 color: isActive
                                     ? settings.accentColor
                                     : Colors.grey,
                               ),
-                              const SizedBox(width: 8),
+                              SizedBox(width: 8 * scale),
                               ConstrainedBox(
-                                constraints: const BoxConstraints(
-                                  maxWidth: 150,
+                                constraints: BoxConstraints(
+                                  maxWidth: 150 * scale,
                                 ),
                                 child: Text(
                                   fileName,
@@ -519,11 +554,11 @@ class _RightSidebarState extends State<RightSidebar> {
                                   ),
                                 ),
                               ),
-                              const SizedBox(width: 8),
+                              SizedBox(width: 8 * scale),
                               isUnsaved
                                   ? Container(
-                                      width: 8,
-                                      height: 8,
+                                      width: 8 * scale,
+                                      height: 8 * scale,
                                       decoration: BoxDecoration(
                                         color: settings.textColor,
                                         shape: BoxShape.circle,
@@ -531,7 +566,7 @@ class _RightSidebarState extends State<RightSidebar> {
                                     )
                                   : _TabCloseButton(
                                       onTap: () => vault.closeTab(file),
-                                    ), // Tell Brain to close tab
+                                    ),
                             ],
                           ),
                         ),
@@ -560,19 +595,20 @@ class _TabCloseButtonState extends State<_TabCloseButton> {
   @override
   Widget build(BuildContext context) {
     final settings = SettingsService();
-    Color hoverColor = settings.isDarkMode ? Colors.white : Colors.black;
-    Color defaultColor = Colors.grey;
+    final scale = settings.uiScale;
     return MouseRegion(
       onEnter: (_) => setState(() => _isHovering = true),
       onExit: (_) => setState(() => _isHovering = false),
       child: GestureDetector(
         onTap: widget.onTap,
         child: Container(
-          padding: const EdgeInsets.all(2),
+          padding: EdgeInsets.all(2 * scale),
           child: Icon(
             Icons.close,
-            size: 14,
-            color: _isHovering ? hoverColor : defaultColor,
+            size: 14 * scale,
+            color: _isHovering
+                ? (settings.isDarkMode ? Colors.white : Colors.black)
+                : Colors.grey,
           ),
         ),
       ),
@@ -581,7 +617,7 @@ class _TabCloseButtonState extends State<_TabCloseButton> {
 }
 
 class SyntaxHighlightingController extends TextEditingController {
-  SyntaxHighlightingController({String? text}) : super(text: text);
+  SyntaxHighlightingController({super.text});
   @override
   TextSpan buildTextSpan({
     required BuildContext context,

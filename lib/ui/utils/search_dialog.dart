@@ -2,10 +2,8 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import '../../services/settings_service.dart';
 
-/// UI LAYER: Command Palette
 class SearchDialog extends StatefulWidget {
   final List<FileSystemEntity> files;
-
   const SearchDialog({super.key, required this.files});
 
   @override
@@ -31,6 +29,7 @@ class _SearchDialogState extends State<SearchDialog> {
   @override
   Widget build(BuildContext context) {
     final settings = SettingsService();
+    final scale = settings.uiScale;
 
     final suggestions = widget.files.where((file) {
       final name = file.uri.pathSegments.last.toLowerCase();
@@ -44,13 +43,13 @@ class _SearchDialogState extends State<SearchDialog> {
         side: BorderSide(color: settings.dividerColor, width: 1),
       ),
       child: Container(
-        width: 500,
-        constraints: const BoxConstraints(maxHeight: 450),
+        width: 500 * scale,
+        constraints: BoxConstraints(maxHeight: 450 * scale),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Padding(
-              padding: const EdgeInsets.all(16.0),
+              padding: EdgeInsets.all(16.0 * scale),
               child: TextField(
                 controller: _controller,
                 autofocus: true,
@@ -59,10 +58,18 @@ class _SearchDialogState extends State<SearchDialog> {
                 decoration: InputDecoration(
                   hintText: "Search files by name...",
                   hintStyle: TextStyle(color: settings.dimTextColor),
-                  prefixIcon: Icon(Icons.search, color: settings.dimTextColor),
+                  prefixIcon: Icon(
+                    Icons.search,
+                    color: settings.dimTextColor,
+                    size: 24 * scale,
+                  ),
                   suffixIcon: _query.isNotEmpty
                       ? IconButton(
-                          icon: Icon(Icons.clear, color: settings.dimTextColor),
+                          icon: Icon(
+                            Icons.clear,
+                            color: settings.dimTextColor,
+                            size: 24 * scale,
+                          ),
                           onPressed: () {
                             setState(() {
                               _query = '';
@@ -74,11 +81,11 @@ class _SearchDialogState extends State<SearchDialog> {
                   filled: true,
                   fillColor: settings.scaffoldColor,
                   border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: BorderRadius.circular(8 * scale),
                     borderSide: BorderSide.none,
                   ),
                   focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: BorderRadius.circular(8 * scale),
                     borderSide: BorderSide(
                       color: settings.accentColor,
                       width: 1,
@@ -103,13 +110,14 @@ class _SearchDialogState extends State<SearchDialog> {
                         final file = suggestions[index];
                         final name = file.uri.pathSegments.last;
                         return ListTile(
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 24,
-                            vertical: 4,
+                          contentPadding: EdgeInsets.symmetric(
+                            horizontal: 24 * scale,
+                            vertical: 4 * scale,
                           ),
                           leading: Icon(
                             Icons.description_outlined,
                             color: settings.dimTextColor,
+                            size: 24 * scale,
                           ),
                           title: Text(
                             name,

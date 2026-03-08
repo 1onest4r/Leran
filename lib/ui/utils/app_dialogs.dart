@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import '../../services/settings_service.dart';
 
-/// UI LAYER: Reusable Popups
 class AppDialogs {
   static void showSettings(BuildContext context) {
     final settings = SettingsService();
+    final scale = settings.uiScale;
 
     showDialog(
       context: context,
@@ -19,7 +19,7 @@ class AppDialogs {
                 style: TextStyle(color: settings.textColor),
               ),
               content: SizedBox(
-                width: 400,
+                width: 400 * scale,
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -50,7 +50,7 @@ class AppDialogs {
                     ),
                     Divider(color: settings.dividerColor),
                     Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 8.0),
+                      padding: EdgeInsets.symmetric(vertical: 8.0 * scale),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -95,6 +95,7 @@ class AppDialogs {
     final TextEditingController controller = TextEditingController();
     final RegExp invalidChars = RegExp(r'[<>:"/\\|?*]');
     final settings = SettingsService();
+    final scale = settings.uiScale;
 
     return showDialog<String>(
       context: context,
@@ -119,7 +120,7 @@ class AppDialogs {
                 style: TextStyle(color: settings.textColor),
               ),
               content: SizedBox(
-                width: 400,
+                width: 400 * scale,
                 child: TextField(
                   controller: controller,
                   autofocus: true,
