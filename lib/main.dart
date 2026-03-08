@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_demo/service/local_storage/local_storage.dart';
 import 'package:flutter_demo/service/service_locator.dart';
+import 'package:flutter_demo/ui/4_user_login/login_screen.dart';
 
 import 'ui/1_dart/dart_demo_screen.dart';
 import 'ui/2_widgets_layout/widgets_layout_demo.dart';
@@ -8,7 +9,7 @@ import 'ui/3_state_management/state_management.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  setupServiceLoader();
+  setupServiceLocator();
   await getIt<LocalStorage>().init();
   runApp(const MyApp());
 }
@@ -75,6 +76,17 @@ class HomeScreen extends StatelessWidget {
                 MaterialPageRoute(
                   builder: (context) => const StateManagement(),
                 ),
+              );
+            },
+          ),
+          ListTile(
+            title: const Text("4. User login/sign up"),
+            leading: const Icon(Icons.code), // Optional: adds a little icon
+            onTap: () {
+              // Navigate to the new screen defined in the other file
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const LoginScreen()),
               );
             },
           ),

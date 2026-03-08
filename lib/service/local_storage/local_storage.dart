@@ -1,11 +1,10 @@
 import 'dart:ui';
-// import 'package:flutter/src/material/colors.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class LocalStorage {
   late final SharedPreferences prefs;
-  static const _colorKey = 'OBAMAWASHERE';
-  static const _numberKey = 'MICHEALWASHERE';
+  static const _colorKey = 'color';
+  static const _numberKey = 'number';
 
   Future<void> init() async {
     prefs = await SharedPreferences.getInstance();
@@ -18,8 +17,7 @@ class LocalStorage {
   }
 
   int getNumber() {
-    final number = prefs.getInt(_numberKey) ?? 0;
-    return number;
+    return prefs.getInt(_numberKey) ?? 0;
   }
 
   Future<void> setColor(Color color) async {
@@ -27,7 +25,7 @@ class LocalStorage {
     await prefs.setInt(_colorKey, colorInt);
   }
 
-  Future<void> setNumber(int number) async {
-    await prefs.setInt(_numberKey, number);
+  Future<void> setNumber(int value) async {
+    await prefs.setInt(_numberKey, value);
   }
 }
