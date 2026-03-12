@@ -51,6 +51,8 @@ ios/Runner/GoogleService-Info.plist
 # Firebase Admin SDK keys
 firebase-adminsdk*.json
 serviceAccountKey.json
+firebase.json
+firebase_options.dart
 
 # Environment variables
 .env

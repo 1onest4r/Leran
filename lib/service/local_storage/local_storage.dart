@@ -1,10 +1,12 @@
 import 'dart:ui';
+import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class LocalStorage {
   late final SharedPreferences prefs;
   static const _colorKey = 'color';
   static const _numberKey = 'number';
+  static const _themeKey = 'theme';
 
   Future<void> init() async {
     prefs = await SharedPreferences.getInstance();
@@ -27,5 +29,26 @@ class LocalStorage {
 
   Future<void> setNumber(int value) async {
     await prefs.setInt(_numberKey, value);
+  }
+
+  ThemeMode getTheme() {
+    final theme = prefs.getString(_themeKey);
+    if (theme == "light") {
+      return ThemeMode.light;
+    } else if (theme == "dark") {
+      return ThemeMode.dark;
+    } else {
+      return ThemeMode.system;
+    }
+  }
+
+  Future<void> setTheme(ThemeMode theme) async {
+    if (theme == ThemeMode.light) {
+      await prefs.setString(_themeKey, "light");
+    } else if (theme == ThemeMode.dark) {
+      await prefs.setString(_themeKey, "dark");
+    } else {
+      await prefs.remove(_themeKey);
+    }
   }
 }

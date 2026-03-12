@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_demo/service/local_storage/local_storage.dart';
-import '../../service/service_locator.dart';
+import '../../../service/service_locator.dart';
 
 class StateManagementManager {
   final List<MaterialAccentColor> boxColor = [

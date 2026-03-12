@@ -1,29 +1,45 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_demo/app_state.dart';
+import 'package:flutter_demo/service/auth/auth.dart';
 import 'package:flutter_demo/service/local_storage/local_storage.dart';
 import 'package:flutter_demo/service/service_locator.dart';
-import 'package:flutter_demo/ui/4_user_login/login_screen.dart';
+import 'package:flutter_demo/ui/demos/4_user_login/login_screen.dart';
+import 'package:flutter_demo/ui/settings/settings_screen.dart';
 
-import 'ui/1_dart/dart_demo_screen.dart';
-import 'ui/2_widgets_layout/widgets_layout_demo.dart';
-import 'ui/3_state_management/state_management.dart';
+import 'ui/demos/1_dart/dart_demo_screen.dart';
+import 'ui/demos/2_widgets_layout/widgets_layout_demo.dart';
+import 'ui/demos/3_state_management/state_management.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   setupServiceLocator();
   await getIt<LocalStorage>().init();
+  await getIt<Auth>().init();
+  await getIt<AppState>().init();
   runApp(const MyApp());
 }
 
-class MyApp extends StatelessWidget {
+class MyApp extends StatefulWidget {
   const MyApp({super.key});
 
   @override
+  State<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> {
+  final appState = getIt<AppState>();
+  @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      title: 'Flutter Demo',
-      theme: ThemeData(primarySwatch: Colors.blue, useMaterial3: true),
-      home: const HomeScreen(),
+    return ListenableBuilder(
+      listenable: appState,
+      builder: (context, child) {
+        return MaterialApp(
+          debugShowCheckedModeBanner: false,
+          title: 'Flutter Demo',
+          theme: ThemeData(primarySwatch: Colors.blue, useMaterial3: true),
+          home: const HomeScreen(),
+        );
+      },
     );
   }
 }
@@ -37,6 +53,24 @@ class HomeScreen extends StatelessWidget {
       appBar: AppBar(
         title: const Text("Home Screen"),
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+      ),
+      drawer: Drawer(
+        child: ListView(
+          children: [
+            DrawerHeader(child: FlutterLogo()),
+            ListTile(
+              title: Text("Settings"),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const SettingsScreen(),
+                  ),
+                );
+              },
+            ),
+          ],
+        ),
       ),
       // A ListView for your items
       body: ListView(
