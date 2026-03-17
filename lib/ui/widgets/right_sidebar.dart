@@ -21,7 +21,6 @@ class _RightSidebarState extends State<RightSidebar> {
     super.initState();
     final vault = VaultController();
 
-    // NEW MAGIC PARSING: Break files physically to Header AND Body boxes natively
     final content = vault.fileContent;
     final int nlIndex = content.indexOf('\n');
     String headText = "";
@@ -52,7 +51,6 @@ class _RightSidebarState extends State<RightSidebar> {
   }
 
   void _notifyMergedContent() {
-    // Take changes individually via respective keys updating Vault Logic naturally back into saving line!
     final vault = VaultController();
     final String merged = "${_headerController.text}\n${_bodyController.text}";
     vault.updateContent(merged);
@@ -91,11 +89,10 @@ class _RightSidebarState extends State<RightSidebar> {
             onSubmitted: (val) async {
               if (val.isNotEmpty) {
                 final success = await vault.renameActiveNote(val);
-                if (!success && context.mounted) {
+                if (!success && context.mounted)
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(content: Text("Name exists or invalid.")),
                   );
-                }
               }
               if (context.mounted) Navigator.pop(context);
             },
@@ -294,8 +291,7 @@ class _RightSidebarState extends State<RightSidebar> {
   Widget build(BuildContext context) {
     final settings = SettingsService();
     final vault = VaultController();
-    final scale =
-        settings.uiScale; // Applied dynamic multiplier to everything bounds!
+    final scale = settings.uiScale;
 
     return AnimatedBuilder(
       animation: Listenable.merge([settings, vault]),
@@ -314,7 +310,6 @@ class _RightSidebarState extends State<RightSidebar> {
                 children: [
                   Column(
                     children: [
-                      // ACTUAL SEPARATED TITLE FILE MAPPING  (No longer meaningless formatting placeholder)
                       Container(
                         padding: EdgeInsets.fromLTRB(
                           40 * scale,
@@ -324,8 +319,7 @@ class _RightSidebarState extends State<RightSidebar> {
                         ),
                         child: TextField(
                           controller: _headerController,
-                          onChanged: (_) =>
-                              _notifyMergedContent(), // Saves title modification straight mapping lines inside content hooks
+                          onChanged: (_) => _notifyMergedContent(),
                           style: TextStyle(
                             fontSize: 32,
                             fontWeight: FontWeight.bold,
@@ -354,7 +348,6 @@ class _RightSidebarState extends State<RightSidebar> {
                           ),
                         ),
                       ),
-                      // MAIN PARSING LOWER EDIT FRAME
                       Expanded(
                         child: Container(
                           padding: EdgeInsets.symmetric(horizontal: 40 * scale),
@@ -379,8 +372,6 @@ class _RightSidebarState extends State<RightSidebar> {
                       ),
                     ],
                   ),
-
-                  // HAMBURGER
                   Positioned(
                     top: 20 * scale,
                     right: 20 * scale,
@@ -461,8 +452,6 @@ class _RightSidebarState extends State<RightSidebar> {
                 ],
               ),
             ),
-
-            // BOTTOM TABS TRAY LAYOUT
             Container(
               height: 36 * scale,
               width: double.infinity,

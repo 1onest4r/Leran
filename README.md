@@ -9,10 +9,8 @@ used external packages:
 -file_picker ^10.3.10
 
 TODO:
-test horizontal scrolling in tab section
-
+fix the ui overflowing issue with minimum size
 fix in note taking section the cursor not moving into the blank space
-fix the ui scaling issue in the settings
 
 add latex (https://www.latex-project.org/)
 add scrollbar to the bottom of tab section

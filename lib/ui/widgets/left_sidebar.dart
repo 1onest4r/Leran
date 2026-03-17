@@ -7,7 +7,15 @@ import '../utils/app_dialogs.dart';
 import '../utils/search_dialog.dart';
 
 class LeftSidebar extends StatefulWidget {
-  const LeftSidebar({super.key});
+  final bool isCollapsed;
+  final VoidCallback onToggleSidebar;
+
+  const LeftSidebar({
+    super.key,
+    required this.isCollapsed,
+    required this.onToggleSidebar,
+  });
+
   @override
   State<LeftSidebar> createState() => _LeftSidebarState();
 }
@@ -30,7 +38,9 @@ class _LeftSidebarState extends State<LeftSidebar> {
 
   void _startTimer() {
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      setState(() => _sessionDuration += const Duration(seconds: 1));
+      if (mounted) {
+        setState(() => _sessionDuration += const Duration(seconds: 1));
+      }
     });
   }
 
@@ -147,153 +157,192 @@ class _LeftSidebarState extends State<LeftSidebar> {
     final vault = VaultController();
     final scale = settings.uiScale;
 
-    return AnimatedBuilder(
-      animation: vault,
-      builder: (context, child) {
-        return Container(
-          color: settings.sidebarColor,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // --- TOP CONTROLS TRAY---
-              Container(
-                padding: EdgeInsets.symmetric(
-                  vertical: 10 * scale,
-                  horizontal: 8 * scale,
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    _iconBtn(
-                      Icons.add_box_outlined,
-                      settings.accentColor,
-                      "New Note",
-                      scale,
-                      onTap: () => _createNewNote(context),
-                    ),
-                    _iconBtn(
-                      Icons.search,
-                      settings.dimTextColor,
-                      "Search",
-                      scale,
-                      onTap: () => _openSearch(context),
-                    ),
-                    _iconBtn(
-                      Icons.hub_outlined,
-                      settings.dimTextColor,
-                      "Graph View",
-                      scale,
-                      onTap: () {},
-                    ),
-                    _iconBtn(
-                      Icons.settings_outlined,
-                      settings.dimTextColor,
-                      "Settings",
-                      scale,
-                      onTap: () => AppDialogs.showSettings(context),
-                    ),
-                  ],
-                ),
+    // --- STATE 1: COLLAPSED VIEW (Mini Bar) ---
+    if (widget.isCollapsed) {
+      return Container(
+        color: settings.sidebarColor,
+        child: Column(
+          children: [
+            SizedBox(height: 10 * scale),
+            IconButton(
+              icon: Icon(
+                Icons.keyboard_double_arrow_right,
+                color: settings.dimTextColor,
+                size: 24 * scale,
               ),
+              onPressed: widget.onToggleSidebar,
+              tooltip: "Expand Sidebar",
+              splashRadius: 20 * scale,
+            ),
+          ],
+        ),
+      );
+    }
 
-              Divider(color: settings.dividerColor, height: 1),
-
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Padding(
-                      padding: EdgeInsets.fromLTRB(
-                        16 * scale,
-                        16 * scale,
-                        16 * scale,
-                        8 * scale,
-                      ),
-                      child: Text(
-                        "EXPLORER",
-                        style: TextStyle(
-                          color: settings.dimTextColor,
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
-                          letterSpacing: 1.5,
+    // --- STATE 2: FULL VIEW ---
+    return Container(
+      color: settings.sidebarColor,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // --- FIX: SAFE TOP CONTROLS TRAY ---
+          Container(
+            padding: EdgeInsets.symmetric(
+              vertical: 10 * scale,
+              horizontal: 8 * scale,
+            ),
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                // Safely clip using SingleChildScrollView instead of OverflowBox
+                return SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  physics:
+                      const NeverScrollableScrollPhysics(), // Disables scrolling, acts as a pure clipping bounds
+                  child: SizedBox(
+                    // Dynamically set width: Use available space, but never drop below 130px
+                    width: constraints.maxWidth < 130 * scale
+                        ? 130 * scale
+                        : constraints.maxWidth,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        _iconBtn(
+                          Icons.add_box_outlined,
+                          settings.accentColor,
+                          "New Note",
+                          scale,
+                          onTap: () => _createNewNote(context),
                         ),
-                      ),
+                        _iconBtn(
+                          Icons.search,
+                          settings.dimTextColor,
+                          "Search",
+                          scale,
+                          onTap: () => _openSearch(context),
+                        ),
+                        _iconBtn(
+                          Icons.settings_outlined,
+                          settings.dimTextColor,
+                          "Settings",
+                          scale,
+                          onTap: () => AppDialogs.showSettings(context),
+                        ),
+                        _iconBtn(
+                          Icons.keyboard_double_arrow_left,
+                          settings.dimTextColor,
+                          "Collapse",
+                          scale,
+                          onTap: widget.onToggleSidebar,
+                        ),
+                      ],
                     ),
-                    Expanded(
-                      child: vault.files.isEmpty
-                          ? Center(
-                              child: Text(
-                                "Empty Folder",
-                                style: TextStyle(
-                                  color: settings.dimTextColor,
-                                  fontSize: 12,
-                                ),
-                              ),
-                            )
-                          : ListView.builder(
-                              itemCount: vault.files.length,
-                              itemBuilder: (context, index) {
-                                final file = vault.files[index];
-                                final String fileName = file.uri.pathSegments
-                                    .lastWhere((s) => s.isNotEmpty);
-                                final bool isActive =
-                                    vault.activeFile != null &&
-                                    file.path == vault.activeFile!.path;
+                  ),
+                );
+              },
+            ),
+          ),
 
-                                return Container(
-                                  color: isActive
-                                      ? settings.accentColor.withOpacity(0.1)
-                                      : Colors.transparent,
-                                  child: ListTile(
-                                    dense: true,
-                                    visualDensity: const VisualDensity(
-                                      vertical: -3,
-                                    ),
-                                    contentPadding: EdgeInsets.symmetric(
-                                      horizontal: 16 * scale,
-                                    ),
-                                    leading: Icon(
-                                      isActive
-                                          ? Icons.edit_document
-                                          : Icons.description_outlined,
-                                      size: 16 * scale,
-                                      color: isActive
-                                          ? settings.accentColor
-                                          : settings.dimTextColor,
-                                    ),
-                                    title: Text(
-                                      fileName,
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: TextStyle(
-                                        fontFamily: 'Courier',
-                                        fontSize: 13,
-                                        color: isActive
-                                            ? settings.textColor
-                                            : settings.dimTextColor,
-                                        fontWeight: isActive
-                                            ? FontWeight.bold
-                                            : FontWeight.normal,
-                                      ),
-                                    ),
-                                    onTap: () => vault.openFile(file),
-                                  ),
-                                );
-                              },
-                            ),
+          Divider(color: settings.dividerColor, height: 1),
+
+          // --- EXPLORER LIST ---
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Padding(
+                  padding: EdgeInsets.fromLTRB(
+                    16 * scale,
+                    16 * scale,
+                    16 * scale,
+                    8 * scale,
+                  ),
+                  child: Text(
+                    "EXPLORER",
+                    style: TextStyle(
+                      color: settings.dimTextColor,
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 1.5,
                     ),
-                  ],
+                  ),
                 ),
-              ),
+                Expanded(
+                  child: vault.files.isEmpty
+                      ? Center(
+                          child: Text(
+                            "Empty Folder",
+                            style: TextStyle(
+                              color: settings.dimTextColor,
+                              fontSize: 12,
+                            ),
+                          ),
+                        )
+                      : ListView.builder(
+                          itemCount: vault.files.length,
+                          itemBuilder: (context, index) {
+                            final file = vault.files[index];
+                            final String fileName = file.uri.pathSegments
+                                .lastWhere((s) => s.isNotEmpty);
+                            final bool isActive =
+                                vault.activeFile != null &&
+                                file.path == vault.activeFile!.path;
 
-              Divider(color: settings.dividerColor, height: 1),
+                            return Container(
+                              color: isActive
+                                  ? settings.accentColor.withOpacity(0.1)
+                                  : Colors.transparent,
+                              child: ListTile(
+                                dense: true,
+                                visualDensity: const VisualDensity(
+                                  vertical: -3,
+                                ),
+                                contentPadding: EdgeInsets.symmetric(
+                                  horizontal: 16 * scale,
+                                ),
+                                leading: Icon(
+                                  isActive
+                                      ? Icons.edit_document
+                                      : Icons.description_outlined,
+                                  size: 16 * scale,
+                                  color: isActive
+                                      ? settings.accentColor
+                                      : settings.dimTextColor,
+                                ),
+                                title: Text(
+                                  fileName,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    fontFamily: 'Courier',
+                                    fontSize: 13,
+                                    color: isActive
+                                        ? settings.textColor
+                                        : settings.dimTextColor,
+                                    fontWeight: isActive
+                                        ? FontWeight.bold
+                                        : FontWeight.normal,
+                                  ),
+                                ),
+                                onTap: () => vault.openFile(file),
+                              ),
+                            );
+                          },
+                        ),
+                ),
+              ],
+            ),
+          ),
 
-              // STATUS BOTTOM BOARD
-              Container(
-                height: 35 * scale,
-                padding: EdgeInsets.symmetric(horizontal: 12 * scale),
-                color: settings.scaffoldColor,
-                child: Row(
+          Divider(color: settings.dividerColor, height: 1),
+
+          // --- STATUS BOTTOM BOARD ---
+          Container(
+            height: 35 * scale,
+            padding: EdgeInsets.symmetric(horizontal: 12 * scale),
+            color: settings.scaffoldColor,
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                return Row(
                   children: [
                     Icon(
                       Icons.dns_outlined,
@@ -301,6 +350,7 @@ class _LeftSidebarState extends State<LeftSidebar> {
                       color: settings.accentColor,
                     ),
                     SizedBox(width: 8 * scale),
+
                     Expanded(
                       child: InkWell(
                         onTap: () => _showRenameDialog(context),
@@ -320,35 +370,38 @@ class _LeftSidebarState extends State<LeftSidebar> {
                         ),
                       ),
                     ),
-                    SizedBox(width: 8 * scale),
-                    Container(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: 6 * scale,
-                        vertical: 2 * scale,
-                      ),
-                      decoration: BoxDecoration(
-                        color: settings.isDarkMode
-                            ? Colors.black26
-                            : Colors.black12,
-                        borderRadius: BorderRadius.circular(4 * scale),
-                      ),
-                      child: Text(
-                        _formatDuration(_sessionDuration),
-                        style: TextStyle(
-                          fontFamily: 'Courier',
-                          color: settings.dimTextColor,
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
+
+                    if (constraints.maxWidth > 130 * scale) ...[
+                      SizedBox(width: 8 * scale),
+                      Container(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: 6 * scale,
+                          vertical: 2 * scale,
+                        ),
+                        decoration: BoxDecoration(
+                          color: settings.isDarkMode
+                              ? Colors.black26
+                              : Colors.black12,
+                          borderRadius: BorderRadius.circular(4 * scale),
+                        ),
+                        child: Text(
+                          _formatDuration(_sessionDuration),
+                          style: TextStyle(
+                            fontFamily: 'Courier',
+                            color: settings.dimTextColor,
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ),
-                    ),
+                    ],
                   ],
-                ),
-              ),
-            ],
+                );
+              },
+            ),
           ),
-        );
-      },
+        ],
+      ),
     );
   }
 
@@ -364,7 +417,7 @@ class _LeftSidebarState extends State<LeftSidebar> {
       tooltip: tooltip,
       splashRadius: 20 * scale,
       constraints: const BoxConstraints(),
-      padding: EdgeInsets.zero,
+      padding: EdgeInsets.all(4 * scale),
       onPressed: onTap,
     );
   }
