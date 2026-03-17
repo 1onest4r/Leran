@@ -12,8 +12,14 @@ used external packages:
 
 -window_manager ^0.3.8
 
+"======================WHEN PUBLISHING=========================="
+use xdg-desktop-portal for permission on single folder for increased approval chance
+use flatpak to handle the permissions
+either bundle flutter engine or build binaries for reproductivity
+keep it minimal
+"=============================================================="
+
 TODO:
-fix the ui overflowing issue with minimum size
 fix in note taking section the cursor not moving into the blank space
 
 add latex (https://www.latex-project.org/)
