@@ -16,6 +16,7 @@ fix text in header not being saved
 fix the ui scaling issue in the settings
 fix the latency issue when typing little faster
 
+add text styling semantics
 add a button for choosing another folder in the current session
 add into the settings option for selection a new folder
 add a feature where it asks for permission from user
@@ -56,7 +57,7 @@ me a path and a string, and I will save it to the hard drive."
 
 ---
 
-2. THE LOGIC LAYER (vault_controller.dart) -> _NEW_
+2. THE LOGIC LAYER (vault*controller.dart) -> \_NEW*
 
 ---
 
