@@ -14,7 +14,7 @@ test horizontal scrolling in tab section
 fix in note taking section the cursor not moving into the blank space
 fix the ui scaling issue in the settings
 
-add latex (https://www.overleaf.com/)
+add latex (https://www.latex-project.org/)
 add scrollbar to the bottom of tab section
 add text styling semantics
 add a button for choosing another folder in the current session
