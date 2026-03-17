@@ -81,24 +81,28 @@ class _RightSidebarState extends State<RightSidebar> {
         title: Text("Rename File", style: TextStyle(color: settings.textColor)),
         content: SizedBox(
           width: 400 * scale,
-          child: TextField(
-            controller: controller,
-            autofocus: true,
-            style: TextStyle(color: settings.textColor),
-            cursorColor: settings.accentColor,
-            onSubmitted: (val) async {
-              if (val.isNotEmpty) {
-                final success = await vault.renameActiveNote(val);
-                if (!success && context.mounted)
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text("Name exists or invalid.")),
-                  );
-              }
-              if (context.mounted) Navigator.pop(context);
-            },
-            decoration: InputDecoration(
-              focusedBorder: UnderlineInputBorder(
-                borderSide: BorderSide(color: settings.accentColor),
+          // THE FIX: Wrap in SingleChildScrollView
+          child: SingleChildScrollView(
+            child: TextField(
+              controller: controller,
+              autofocus: true,
+              style: TextStyle(color: settings.textColor),
+              cursorColor: settings.accentColor,
+              onSubmitted: (val) async {
+                if (val.isNotEmpty) {
+                  final success = await vault.renameActiveNote(val);
+                  if (!success && context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text("Name exists or invalid.")),
+                    );
+                  }
+                }
+                if (context.mounted) Navigator.pop(context);
+              },
+              decoration: InputDecoration(
+                focusedBorder: UnderlineInputBorder(
+                  borderSide: BorderSide(color: settings.accentColor),
+                ),
               ),
             ),
           ),
@@ -113,8 +117,9 @@ class _RightSidebarState extends State<RightSidebar> {
           ),
           TextButton(
             onPressed: () async {
-              if (controller.text.isNotEmpty)
+              if (controller.text.isNotEmpty) {
                 await vault.renameActiveNote(controller.text);
+              }
               if (context.mounted) Navigator.pop(context);
             },
             child: Text(
@@ -154,25 +159,28 @@ class _RightSidebarState extends State<RightSidebar> {
               vertical: 20 * scale,
               horizontal: 24 * scale,
             ),
-            content: Row(
-              mainAxisSize: MainAxisSize.min,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  Icons.check_circle_outline,
-                  color: settings.accentColor,
-                  size: 28 * scale,
-                ),
-                SizedBox(width: 12 * scale),
-                Text(
-                  "File Saved!",
-                  style: TextStyle(
-                    color: settings.textColor,
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
+            // THE FIX: Wrap in SingleChildScrollView
+            content: SingleChildScrollView(
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.check_circle_outline,
+                    color: settings.accentColor,
+                    size: 28 * scale,
                   ),
-                ),
-              ],
+                  SizedBox(width: 12 * scale),
+                  Text(
+                    "File Saved!",
+                    style: TextStyle(
+                      color: settings.textColor,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
             ),
           );
         },
@@ -217,59 +225,65 @@ class _RightSidebarState extends State<RightSidebar> {
                 "Adjust Text Size",
                 style: TextStyle(color: settings.textColor),
               ),
-              content: Row(
-                mainAxisSize: MainAxisSize.min,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  IconButton(
-                    icon: Icon(
-                      Icons.chevron_left,
-                      color: settings.dimTextColor,
-                      size: 30 * scale,
-                    ),
-                    onPressed: () => updateSize(settings.fontSize - 1),
-                  ),
-                  SizedBox(
-                    width: 60 * scale,
-                    child: TextField(
-                      controller: controller,
-                      keyboardType: TextInputType.number,
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        color: settings.textColor,
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
+              // THE FIX: Wrap in SingleChildScrollView
+              content: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    IconButton(
+                      icon: Icon(
+                        Icons.chevron_left,
+                        color: settings.dimTextColor,
+                        size: 30 * scale,
                       ),
-                      decoration: InputDecoration(
-                        enabledBorder: UnderlineInputBorder(
-                          borderSide: BorderSide(color: settings.dimTextColor),
+                      onPressed: () => updateSize(settings.fontSize - 1),
+                    ),
+                    SizedBox(
+                      width: 60 * scale,
+                      child: TextField(
+                        controller: controller,
+                        keyboardType: TextInputType.number,
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: settings.textColor,
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
                         ),
-                        focusedBorder: UnderlineInputBorder(
-                          borderSide: BorderSide(color: settings.accentColor),
+                        decoration: InputDecoration(
+                          enabledBorder: UnderlineInputBorder(
+                            borderSide: BorderSide(
+                              color: settings.dimTextColor,
+                            ),
+                          ),
+                          focusedBorder: UnderlineInputBorder(
+                            borderSide: BorderSide(color: settings.accentColor),
+                          ),
                         ),
+                        onSubmitted: (val) {
+                          final parsed = double.tryParse(val);
+                          if (parsed != null)
+                            updateSize(parsed);
+                          else
+                            setState(
+                              () => controller.text = settings.fontSize
+                                  .toInt()
+                                  .toString(),
+                            );
+                        },
                       ),
-                      onSubmitted: (val) {
-                        final parsed = double.tryParse(val);
-                        if (parsed != null)
-                          updateSize(parsed);
-                        else
-                          setState(
-                            () => controller.text = settings.fontSize
-                                .toInt()
-                                .toString(),
-                          );
-                      },
                     ),
-                  ),
-                  IconButton(
-                    icon: Icon(
-                      Icons.chevron_right,
-                      color: settings.dimTextColor,
-                      size: 30 * scale,
+                    IconButton(
+                      icon: Icon(
+                        Icons.chevron_right,
+                        color: settings.dimTextColor,
+                        size: 30 * scale,
+                      ),
+                      onPressed: () => updateSize(settings.fontSize + 1),
                     ),
-                    onPressed: () => updateSize(settings.fontSize + 1),
-                  ),
-                ],
+                  ],
+                ),
               ),
               actions: [
                 TextButton(

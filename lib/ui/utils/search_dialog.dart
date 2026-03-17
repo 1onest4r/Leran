@@ -31,6 +31,9 @@ class _SearchDialogState extends State<SearchDialog> {
     final settings = SettingsService();
     final scale = settings.uiScale;
 
+    // Get screen height for dynamic constraints
+    final screenHeight = MediaQuery.of(context).size.height;
+
     final suggestions = widget.files.where((file) {
       final name = file.uri.pathSegments.last.toLowerCase();
       return name.contains(_query.toLowerCase());
@@ -44,7 +47,8 @@ class _SearchDialogState extends State<SearchDialog> {
       ),
       child: Container(
         width: 500 * scale,
-        constraints: BoxConstraints(maxHeight: 450 * scale),
+        // THE FIX: Max height is now 80% of the window height, never overflowing
+        constraints: BoxConstraints(maxHeight: screenHeight * 0.8),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [

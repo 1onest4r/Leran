@@ -8,6 +8,10 @@ used external packages:
 
 -file_picker ^10.3.10
 
+-shared_preferences ^2.5.4
+
+-window_manager ^0.3.8
+
 TODO:
 fix the ui overflowing issue with minimum size
 fix in note taking section the cursor not moving into the blank space

@@ -20,59 +20,62 @@ class AppDialogs {
               ),
               content: SizedBox(
                 width: 400 * scale,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    SwitchListTile(
-                      title: Text(
-                        "Dark Mode",
-                        style: TextStyle(color: settings.textColor),
+                // THE FIX: Wrap the Column in SingleChildScrollView
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      SwitchListTile(
+                        title: Text(
+                          "Dark Mode",
+                          style: TextStyle(color: settings.textColor),
+                        ),
+                        value: settings.isDarkMode,
+                        activeColor: settings.accentColor,
+                        onChanged: (val) => settings.toggleTheme(val),
                       ),
-                      value: settings.isDarkMode,
-                      activeColor: settings.accentColor,
-                      onChanged: (val) => settings.toggleTheme(val),
-                    ),
-                    SwitchListTile(
-                      title: Text(
-                        "Auto Save",
-                        style: TextStyle(color: settings.textColor),
+                      SwitchListTile(
+                        title: Text(
+                          "Auto Save",
+                          style: TextStyle(color: settings.textColor),
+                        ),
+                        subtitle: Text(
+                          "Save while typing",
+                          style: TextStyle(
+                            color: settings.dimTextColor,
+                            fontSize: 12,
+                          ),
+                        ),
+                        value: settings.autoSave,
+                        activeColor: settings.accentColor,
+                        onChanged: (val) => settings.toggleAutoSave(val),
                       ),
-                      subtitle: Text(
-                        "Save while typing",
-                        style: TextStyle(
-                          color: settings.dimTextColor,
-                          fontSize: 12,
+                      Divider(color: settings.dividerColor),
+                      Padding(
+                        padding: EdgeInsets.symmetric(vertical: 8.0 * scale),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              "UI Scale: ${(settings.uiScale * 100).toInt()}%",
+                              style: TextStyle(color: settings.textColor),
+                            ),
+                            Slider(
+                              value: settings.uiScale,
+                              min: 0.8,
+                              max: 1.5,
+                              divisions: 7,
+                              activeColor: settings.accentColor,
+                              inactiveColor: settings.dimTextColor.withOpacity(
+                                0.2,
+                              ),
+                              onChanged: (val) => settings.setUiScale(val),
+                            ),
+                          ],
                         ),
                       ),
-                      value: settings.autoSave,
-                      activeColor: settings.accentColor,
-                      onChanged: (val) => settings.toggleAutoSave(val),
-                    ),
-                    Divider(color: settings.dividerColor),
-                    Padding(
-                      padding: EdgeInsets.symmetric(vertical: 8.0 * scale),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            "UI Scale: ${(settings.uiScale * 100).toInt()}%",
-                            style: TextStyle(color: settings.textColor),
-                          ),
-                          Slider(
-                            value: settings.uiScale,
-                            min: 0.8,
-                            max: 1.5,
-                            divisions: 7,
-                            activeColor: settings.accentColor,
-                            inactiveColor: settings.dimTextColor.withOpacity(
-                              0.2,
-                            ),
-                            onChanged: (val) => settings.setUiScale(val),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
               actions: [
@@ -121,24 +124,27 @@ class AppDialogs {
               ),
               content: SizedBox(
                 width: 400 * scale,
-                child: TextField(
-                  controller: controller,
-                  autofocus: true,
-                  style: TextStyle(color: settings.textColor),
-                  cursorColor: settings.accentColor,
-                  onSubmitted: (_) => submit(),
-                  onChanged: (_) {
-                    if (errorText != null) setState(() => errorText = null);
-                  },
-                  decoration: InputDecoration(
-                    hintText: "Enter filename...",
-                    hintStyle: TextStyle(color: settings.dimTextColor),
-                    errorText: errorText,
-                    enabledBorder: UnderlineInputBorder(
-                      borderSide: BorderSide(color: settings.dimTextColor),
-                    ),
-                    focusedBorder: UnderlineInputBorder(
-                      borderSide: BorderSide(color: settings.accentColor),
+                // THE FIX: Wrap TextField in SingleChildScrollView
+                child: SingleChildScrollView(
+                  child: TextField(
+                    controller: controller,
+                    autofocus: true,
+                    style: TextStyle(color: settings.textColor),
+                    cursorColor: settings.accentColor,
+                    onSubmitted: (_) => submit(),
+                    onChanged: (_) {
+                      if (errorText != null) setState(() => errorText = null);
+                    },
+                    decoration: InputDecoration(
+                      hintText: "Enter filename...",
+                      hintStyle: TextStyle(color: settings.dimTextColor),
+                      errorText: errorText,
+                      enabledBorder: UnderlineInputBorder(
+                        borderSide: BorderSide(color: settings.dimTextColor),
+                      ),
+                      focusedBorder: UnderlineInputBorder(
+                        borderSide: BorderSide(color: settings.accentColor),
+                      ),
                     ),
                   ),
                 ),
@@ -176,9 +182,12 @@ class AppDialogs {
               "Delete Note?",
               style: TextStyle(color: settings.textColor),
             ),
-            content: Text(
-              "This cannot be undone.",
-              style: TextStyle(color: settings.dimTextColor),
+            // THE FIX: Wrap content in SingleChildScrollView
+            content: SingleChildScrollView(
+              child: Text(
+                "This cannot be undone.",
+                style: TextStyle(color: settings.dimTextColor),
+              ),
             ),
             actions: [
               TextButton(

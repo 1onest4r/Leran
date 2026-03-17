@@ -185,7 +185,7 @@ class _LeftSidebarState extends State<LeftSidebar> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // --- FIX: SAFE TOP CONTROLS TRAY ---
+          // --- TOP CONTROLS TRAY ---
           Container(
             padding: EdgeInsets.symmetric(
               vertical: 10 * scale,
@@ -193,51 +193,98 @@ class _LeftSidebarState extends State<LeftSidebar> {
             ),
             child: LayoutBuilder(
               builder: (context, constraints) {
-                // Safely clip using SingleChildScrollView instead of OverflowBox
-                return SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  physics:
-                      const NeverScrollableScrollPhysics(), // Disables scrolling, acts as a pure clipping bounds
-                  child: SizedBox(
-                    // Dynamically set width: Use available space, but never drop below 130px
-                    width: constraints.maxWidth < 130 * scale
-                        ? 130 * scale
-                        : constraints.maxWidth,
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        _iconBtn(
-                          Icons.add_box_outlined,
-                          settings.accentColor,
-                          "New Note",
-                          scale,
-                          onTap: () => _createNewNote(context),
+                // If we have enough width, space them all perfectly evenly
+                if (constraints.maxWidth >= 150 * scale) {
+                  return Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      _iconBtn(
+                        Icons.add_box_outlined,
+                        settings.accentColor,
+                        "New Note",
+                        scale,
+                        onTap: () => _createNewNote(context),
+                      ),
+                      _iconBtn(
+                        Icons.search,
+                        settings.dimTextColor,
+                        "Search",
+                        scale,
+                        onTap: () => _openSearch(context),
+                      ),
+                      _iconBtn(
+                        Icons.settings_outlined,
+                        settings.dimTextColor,
+                        "Settings",
+                        scale,
+                        onTap: () => AppDialogs.showSettings(context),
+                      ),
+                      _iconBtn(
+                        Icons.keyboard_double_arrow_left,
+                        settings.dimTextColor,
+                        "Collapse Sidebar",
+                        scale,
+                        onTap: widget.onToggleSidebar,
+                      ),
+                    ],
+                  );
+                }
+                // If it's shrinking, protect the Toggle button by pinning it right, and safely hide the rest
+                else {
+                  return Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        child: ClipRect(
+                          child: SingleChildScrollView(
+                            scrollDirection: Axis.horizontal,
+                            physics: const NeverScrollableScrollPhysics(),
+                            child: SizedBox(
+                              // Force the 3 buttons to stay evenly spaced inside the clipping area
+                              width: 110 * scale,
+                              child: Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  _iconBtn(
+                                    Icons.add_box_outlined,
+                                    settings.accentColor,
+                                    "New Note",
+                                    scale,
+                                    onTap: () => _createNewNote(context),
+                                  ),
+                                  _iconBtn(
+                                    Icons.search,
+                                    settings.dimTextColor,
+                                    "Search",
+                                    scale,
+                                    onTap: () => _openSearch(context),
+                                  ),
+                                  _iconBtn(
+                                    Icons.settings_outlined,
+                                    settings.dimTextColor,
+                                    "Settings",
+                                    scale,
+                                    onTap: () =>
+                                        AppDialogs.showSettings(context),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
                         ),
-                        _iconBtn(
-                          Icons.search,
-                          settings.dimTextColor,
-                          "Search",
-                          scale,
-                          onTap: () => _openSearch(context),
-                        ),
-                        _iconBtn(
-                          Icons.settings_outlined,
-                          settings.dimTextColor,
-                          "Settings",
-                          scale,
-                          onTap: () => AppDialogs.showSettings(context),
-                        ),
-                        _iconBtn(
-                          Icons.keyboard_double_arrow_left,
-                          settings.dimTextColor,
-                          "Collapse",
-                          scale,
-                          onTap: widget.onToggleSidebar,
-                        ),
-                      ],
-                    ),
-                  ),
-                );
+                      ),
+                      // Pinned to the far right!
+                      _iconBtn(
+                        Icons.keyboard_double_arrow_left,
+                        settings.dimTextColor,
+                        "Collapse Sidebar",
+                        scale,
+                        onTap: widget.onToggleSidebar,
+                      ),
+                    ],
+                  );
+                }
               },
             ),
           ),
