@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:window_manager/window_manager.dart'; // <--- Import window_manager
+import 'package:window_manager/window_manager.dart';
 import 'services/settings_service.dart';
 import 'ui/screens/home_page.dart';
 

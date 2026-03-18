@@ -22,6 +22,7 @@ keep it minimal
 TODO:
 fix in note taking section the cursor not moving into the blank space
 
+add splash screen for loading stuffs
 add latex (https://www.latex-project.org/)
 add scrollbar to the bottom of tab section
 add text styling semantics
