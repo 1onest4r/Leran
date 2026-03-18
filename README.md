@@ -20,6 +20,7 @@ keep it minimal
 "=============================================================="
 
 TODO:
+fix overflowing hasn't fixed on the linux make it cross platform
 fix in note taking section the cursor not moving into the blank space
 
 add splash screen for loading stuffs
