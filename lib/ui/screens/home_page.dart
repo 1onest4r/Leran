@@ -52,34 +52,39 @@ class _HomePageState extends State<HomePage> {
             child: LayoutBuilder(
               builder: (context, constraints) {
                 // ==========================================================
-                // THE REAL FIX: Proper Responsive Clamping
-                // (No OverflowBox, No disappearing footers!)
+                // THE ULTIMATE CRASH-PROOF FIX (Virtual Canvas)
                 // ==========================================================
 
-                // 1. Define ideal widths
-                final double minSidebarWidth = 50.0 * scale;
-                double maxSidebarWidth = constraints.maxWidth * 0.4; // Max 40%
+                // 1. Define the absolute minimum safe dimensions for the UI
+                final double minSafeWidth = 700.0 * scale;
+                final double minSafeHeight = 450.0 * scale;
 
-                // Failsafe: if window is extremely narrow, override the 40% rule
+                // 2. Determine the actual size the UI will be rendered at.
+                // If the window is large, fill it. If it's too small, lock to safe limits.
+                final double renderWidth = constraints.maxWidth > minSafeWidth
+                    ? constraints.maxWidth
+                    : minSafeWidth;
+
+                final double renderHeight =
+                    constraints.maxHeight > minSafeHeight
+                    ? constraints.maxHeight
+                    : minSafeHeight;
+
+                // 3. Sidebar Math (Based on the safe renderWidth)
+                final double minSidebarWidth = 50.0 * scale;
+                double maxSidebarWidth = renderWidth * 0.4; // Max 40%
+
                 if (maxSidebarWidth < minSidebarWidth) {
                   maxSidebarWidth = minSidebarWidth;
                 }
 
-                // 2. Clamp the drag width so it obeys our ideal rules
                 if (_dragWidth > maxSidebarWidth) _dragWidth = maxSidebarWidth;
                 if (_dragWidth < minSidebarWidth) _dragWidth = minSidebarWidth;
 
-                // 3. Absolute Failsafe for Linux:
-                // If the OS strictly forces the window to be tiny (e.g. 10px wide),
-                // we prevent the layout math from overflowing.
-                double finalSidebarWidth = _dragWidth;
-                if (finalSidebarWidth > constraints.maxWidth) {
-                  finalSidebarWidth = constraints.maxWidth;
-                }
+                final bool isCollapsed = _dragWidth <= 80.0 * scale;
 
-                final bool isCollapsed = finalSidebarWidth <= 80.0 * scale;
-
-                return vault.selectedDirectory == null
+                // 4. Build the Main UI Content
+                Widget mainContent = vault.selectedDirectory == null
                     // --- NO VAULT STATE ---
                     ? Center(
                         child: Column(
@@ -128,8 +133,7 @@ class _HomePageState extends State<HomePage> {
                             children: [
                               // Left Sidebar
                               SizedBox(
-                                width: finalSidebarWidth,
-                                // ClipRect ensures inner widgets cleanly cut off if squished too hard
+                                width: _dragWidth,
                                 child: ClipRect(
                                   child: LeftSidebar(
                                     isCollapsed: isCollapsed,
@@ -138,85 +142,98 @@ class _HomePageState extends State<HomePage> {
                                 ),
                               ),
 
-                              // Divider (Only render if there is room for it)
-                              if (constraints.maxWidth > finalSidebarWidth)
-                                Container(
-                                  width: 1 * scale,
-                                  color: settings.dividerColor,
-                                ),
+                              // Divider
+                              Container(
+                                width: 1 * scale,
+                                color: settings.dividerColor,
+                              ),
 
-                              // Right Editor (Only render if there is room for it)
-                              if (constraints.maxWidth > finalSidebarWidth)
-                                Expanded(
-                                  child: vault.activeFile == null
-                                      ? Center(
-                                          child: Text(
-                                            "Select a file to edit",
-                                            style: TextStyle(
-                                              color: settings.dimTextColor,
-                                            ),
+                              // Right Editor
+                              Expanded(
+                                child: vault.activeFile == null
+                                    ? Center(
+                                        child: Text(
+                                          "Select a file to edit",
+                                          style: TextStyle(
+                                            color: settings.dimTextColor,
                                           ),
-                                        )
-                                      : RightSidebar(
-                                          key: ValueKey(vault.activeFile!.path),
                                         ),
-                                ),
+                                      )
+                                    : RightSidebar(
+                                        key: ValueKey(vault.activeFile!.path),
+                                      ),
+                              ),
                             ],
                           ),
 
                           // --- DRAGGABLE SASH ---
-                          if (constraints.maxWidth > finalSidebarWidth)
-                            Positioned(
-                              left: finalSidebarWidth - (4 * scale),
-                              top: 0,
-                              bottom: 0,
-                              width: 8 * scale,
-                              child: MouseRegion(
-                                cursor: SystemMouseCursors.resizeLeftRight,
-                                onEnter: (_) =>
-                                    setState(() => _isHoveringSash = true),
-                                onExit: (_) =>
-                                    setState(() => _isHoveringSash = false),
-                                child: GestureDetector(
-                                  behavior: HitTestBehavior.opaque,
-                                  onPanUpdate: (details) {
-                                    setState(() {
-                                      _dragWidth += details.delta.dx;
-                                    });
-                                  },
-                                  onPanEnd: (details) {
-                                    setState(() {
-                                      if (_dragWidth > minSidebarWidth &&
-                                          _dragWidth <= 80 * scale) {
-                                        _dragWidth =
-                                            minSidebarWidth; // Snap closed
-                                      } else if (_dragWidth > 80 * scale &&
-                                          _dragWidth < 150 * scale) {
-                                        _dragWidth = 200 * scale; // Snap open
-                                      }
-                                    });
-                                  },
-                                  child: Container(
-                                    color: Colors.transparent,
-                                    child: Center(
-                                      child: AnimatedContainer(
-                                        duration: const Duration(
-                                          milliseconds: 150,
-                                        ),
-                                        width: _isHoveringSash
-                                            ? (2 * scale)
-                                            : 0,
-                                        color: _isHoveringSash
-                                            ? settings.accentColor
-                                            : Colors.transparent,
+                          Positioned(
+                            left: _dragWidth - (4 * scale),
+                            top: 0,
+                            bottom: 0,
+                            width: 8 * scale,
+                            child: MouseRegion(
+                              cursor: SystemMouseCursors.resizeLeftRight,
+                              onEnter: (_) =>
+                                  setState(() => _isHoveringSash = true),
+                              onExit: (_) =>
+                                  setState(() => _isHoveringSash = false),
+                              child: GestureDetector(
+                                behavior: HitTestBehavior.opaque,
+                                onPanUpdate: (details) {
+                                  setState(() {
+                                    _dragWidth += details.delta.dx;
+                                  });
+                                },
+                                onPanEnd: (details) {
+                                  setState(() {
+                                    if (_dragWidth > minSidebarWidth &&
+                                        _dragWidth <= 80 * scale) {
+                                      _dragWidth =
+                                          minSidebarWidth; // Snap closed
+                                    } else if (_dragWidth > 80 * scale &&
+                                        _dragWidth < 150 * scale) {
+                                      _dragWidth = 200 * scale; // Snap open
+                                    }
+                                  });
+                                },
+                                child: Container(
+                                  color: Colors.transparent,
+                                  child: Center(
+                                    child: AnimatedContainer(
+                                      duration: const Duration(
+                                        milliseconds: 150,
                                       ),
+                                      width: _isHoveringSash ? (2 * scale) : 0,
+                                      color: _isHoveringSash
+                                          ? settings.accentColor
+                                          : Colors.transparent,
                                     ),
                                   ),
                                 ),
                               ),
                             ),
+                          ),
                         ],
                       );
+
+                // 5. Wrap the UI in the 2D Scrollable Safety Net
+                // If the window is perfectly fine, you won't even notice this is here.
+                // If the user squishes the window to 200x200, the UI stays 700x450 and allows scrolling.
+                return SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  physics:
+                      const ClampingScrollPhysics(), // Stops bounce effects on desktop
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.vertical,
+                    physics: const ClampingScrollPhysics(),
+                    child: SizedBox(
+                      width: renderWidth,
+                      height: renderHeight,
+                      child: mainContent,
+                    ),
+                  ),
+                );
               },
             ),
           ),
