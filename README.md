@@ -13,6 +13,8 @@ used external packages:
 -window_manager ^0.3.8
 
 "======================WHEN PUBLISHING=========================="
+fix the github and readme to make it appropriate for installing
+very carefuly read the instructions and read the privacy policy!
 use xdg-desktop-portal for permission on single folder for increased approval chance
 use flatpak to handle the permissions
 either bundle flutter engine or build binaries for reproductivity
@@ -20,6 +22,7 @@ keep it minimal
 "=============================================================="
 
 TODO:
+fix add a option for changing vault in the settigs
 fix overflowing hasn't fixed on the linux make it cross platform
 fix in note taking section the cursor not moving into the blank space
 
@@ -27,7 +30,6 @@ add splash screen for loading stuffs
 add latex (https://www.latex-project.org/)
 add scrollbar to the bottom of tab section
 add text styling semantics
-add a button for choosing another folder in the current session
 add a feature where it asks for permission from user
 
 in note taking section add a feature for headers, line breaker and copying stylized text cleanly
