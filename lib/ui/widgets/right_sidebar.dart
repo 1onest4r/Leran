@@ -81,7 +81,6 @@ class _RightSidebarState extends State<RightSidebar> {
         title: Text("Rename File", style: TextStyle(color: settings.textColor)),
         content: SizedBox(
           width: 400 * scale,
-          // THE FIX: Wrap in SingleChildScrollView
           child: SingleChildScrollView(
             child: TextField(
               controller: controller,
@@ -159,7 +158,6 @@ class _RightSidebarState extends State<RightSidebar> {
               vertical: 20 * scale,
               horizontal: 24 * scale,
             ),
-            // THE FIX: Wrap in SingleChildScrollView
             content: SingleChildScrollView(
               child: Row(
                 mainAxisSize: MainAxisSize.min,
@@ -225,7 +223,6 @@ class _RightSidebarState extends State<RightSidebar> {
                 "Adjust Text Size",
                 style: TextStyle(color: settings.textColor),
               ),
-              // THE FIX: Wrap in SingleChildScrollView
               content: SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
                 child: Row(
@@ -466,8 +463,12 @@ class _RightSidebarState extends State<RightSidebar> {
                 ],
               ),
             ),
+
+            // --- FIXED: BOTTOM TABS TRAY ---
             Container(
-              height: 36 * scale,
+              height:
+                  36 *
+                  scale, // RESTORED to exactly match the left sidebar height (35)
               width: double.infinity,
               decoration: BoxDecoration(
                 color: settings.sidebarColor,
@@ -487,94 +488,107 @@ class _RightSidebarState extends State<RightSidebar> {
                 },
                 child: ScrollConfiguration(
                   behavior: ScrollConfiguration.of(context).copyWith(
-                    scrollbars: false,
+                    scrollbars: true,
                     dragDevices: {
                       PointerDeviceKind.touch,
                       PointerDeviceKind.mouse,
                       PointerDeviceKind.trackpad,
                     },
                   ),
-                  child: ListView.builder(
+                  child: Scrollbar(
                     controller: _tabScrollController,
-                    scrollDirection: Axis.horizontal,
-                    itemCount: vault.openedTabs.length,
-                    itemBuilder: (context, index) {
-                      final file = vault.openedTabs[index];
-                      final fileName = file.uri.pathSegments.lastWhere(
-                        (s) => s.isNotEmpty,
-                      );
-                      final isActive =
-                          vault.activeFile != null &&
-                          file.path == vault.activeFile!.path;
-                      final isUnsaved = vault.unsavedPaths.contains(file.path);
+                    thumbVisibility: true, // Scrollbar visible
+                    thickness:
+                        2 *
+                        scale, // SLIM scrollbar overlays neatly at the bottom edge
+                    radius: const Radius.circular(2),
+                    child: ListView.builder(
+                      controller: _tabScrollController,
+                      scrollDirection: Axis.horizontal,
+                      itemCount: vault.openedTabs.length,
+                      // REMOVED the bottom padding to restore perfectly centered text vertically
+                      itemBuilder: (context, index) {
+                        final file = vault.openedTabs[index];
+                        final fileName = file.uri.pathSegments.lastWhere(
+                          (s) => s.isNotEmpty,
+                        );
+                        final isActive =
+                            vault.activeFile != null &&
+                            file.path == vault.activeFile!.path;
+                        final isUnsaved = vault.unsavedPaths.contains(
+                          file.path,
+                        );
 
-                      return InkWell(
-                        onTap: () => vault.openFile(file),
-                        child: Container(
-                          padding: EdgeInsets.symmetric(horizontal: 15 * scale),
-                          alignment: Alignment.center,
-                          decoration: BoxDecoration(
-                            color: isActive
-                                ? settings.scaffoldColor
-                                : Colors.transparent,
-                            border: Border(
-                              right: BorderSide(
-                                color: settings.dividerColor,
-                                width: 0.5 * scale,
-                              ),
-                              top: isActive
-                                  ? BorderSide(
-                                      color: settings.accentColor,
-                                      width: 2 * scale,
-                                    )
-                                  : BorderSide.none,
+                        return InkWell(
+                          onTap: () => vault.openFile(file),
+                          child: Container(
+                            padding: EdgeInsets.symmetric(
+                              horizontal: 15 * scale,
                             ),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                Icons.description,
-                                size: 14 * scale,
-                                color: isActive
-                                    ? settings.accentColor
-                                    : Colors.grey,
-                              ),
-                              SizedBox(width: 8 * scale),
-                              ConstrainedBox(
-                                constraints: BoxConstraints(
-                                  maxWidth: 150 * scale,
+                            alignment: Alignment.center,
+                            decoration: BoxDecoration(
+                              color: isActive
+                                  ? settings.scaffoldColor
+                                  : Colors.transparent,
+                              border: Border(
+                                right: BorderSide(
+                                  color: settings.dividerColor,
+                                  width: 0.5 * scale,
                                 ),
-                                child: Text(
-                                  fileName,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: TextStyle(
-                                    color: isActive
-                                        ? settings.textColor
-                                        : Colors.grey,
-                                    fontSize: 12,
+                                top: isActive
+                                    ? BorderSide(
+                                        color: settings.accentColor,
+                                        width: 2 * scale,
+                                      )
+                                    : BorderSide.none,
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.description,
+                                  size: 14 * scale,
+                                  color: isActive
+                                      ? settings.accentColor
+                                      : Colors.grey,
+                                ),
+                                SizedBox(width: 8 * scale),
+                                ConstrainedBox(
+                                  constraints: BoxConstraints(
+                                    maxWidth: 150 * scale,
+                                  ),
+                                  child: Text(
+                                    fileName,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                      color: isActive
+                                          ? settings.textColor
+                                          : Colors.grey,
+                                      fontSize: 12,
+                                    ),
                                   ),
                                 ),
-                              ),
-                              SizedBox(width: 8 * scale),
-                              isUnsaved
-                                  ? Container(
-                                      width: 8 * scale,
-                                      height: 8 * scale,
-                                      decoration: BoxDecoration(
-                                        color: settings.textColor,
-                                        shape: BoxShape.circle,
+                                SizedBox(width: 8 * scale),
+                                isUnsaved
+                                    ? Container(
+                                        width: 8 * scale,
+                                        height: 8 * scale,
+                                        decoration: BoxDecoration(
+                                          color: settings.textColor,
+                                          shape: BoxShape.circle,
+                                        ),
+                                      )
+                                    : _TabCloseButton(
+                                        onTap: () => vault.closeTab(file),
                                       ),
-                                    )
-                                  : _TabCloseButton(
-                                      onTap: () => vault.closeTab(file),
-                                    ),
-                            ],
+                              ],
+                            ),
                           ),
-                        ),
-                      );
-                    },
+                        );
+                      },
+                    ),
                   ),
                 ),
               ),

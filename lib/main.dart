@@ -4,36 +4,30 @@ import 'services/settings_service.dart';
 import 'ui/screens/home_page.dart';
 
 void main() async {
-  // 1. Ensure Flutter bindings are initialized first
   WidgetsFlutterBinding.ensureInitialized();
-
-  // 2. Load your user settings
   await SettingsService().loadSettings();
 
-  // 3. Initialize Window Manager for Desktop (Linux, Windows, macOS)
+  // Initialize Window Manager
   await windowManager.ensureInitialized();
 
-  // 4. Define Native Window Properties
   WindowOptions windowOptions = const WindowOptions(
-    size: Size(1000, 700), // Default size when app first opens
-    minimumSize: Size(
-      650,
-      450,
-    ), // THE FIX: Prevents squishing the app too small!
-    center: true, // Open in the center of the screen
+    size: Size(1000, 700),
+    minimumSize: Size(650, 450), // Kept as fallback
+    center: true,
     backgroundColor: Colors.transparent,
     skipTaskbar: false,
     titleBarStyle: TitleBarStyle.normal,
     title: 'Digital Garden',
   );
 
-  // 5. Apply the properties and show the window
   windowManager.waitUntilReadyToShow(windowOptions, () async {
+    // THE LINUX FIX: Explicitly enforce the minimum size AFTER the window is created
+    await windowManager.setMinimumSize(const Size(650, 450));
+
     await windowManager.show();
     await windowManager.focus();
   });
 
-  // 6. Run the Flutter UI
   runApp(const NoteApp());
 }
 
@@ -52,7 +46,6 @@ class NoteApp extends StatelessWidget {
           title: 'Digital Garden',
           theme: settings.isDarkMode ? ThemeData.dark() : ThemeData.light(),
           builder: (context, child) {
-            // Apply text scaling globally
             return MediaQuery(
               data: MediaQuery.of(
                 context,
