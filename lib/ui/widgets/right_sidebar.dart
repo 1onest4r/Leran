@@ -56,6 +56,55 @@ class _RightSidebarState extends State<RightSidebar> {
     vault.updateContent(merged);
   }
 
+  // ====================================================================
+  // FIXED: "CLICK AND TYPE" (VIRTUAL SPACE) LOGIC
+  // ====================================================================
+  void _handleEditorPointerUp(
+    PointerUpEvent event,
+    BuildContext context,
+    TextStyle editorStyle,
+  ) {
+    final String text = _bodyController.text;
+    final RenderBox renderBox = context.findRenderObject() as RenderBox;
+
+    // 1. Get the exact Y coordinate of where the user clicked
+    final Offset localPosition = renderBox.globalToLocal(event.position);
+    final double tapY = localPosition.dy;
+
+    // 2. THE FIX: Append a Zero-Width Space (\u200B) to the text before measuring.
+    // This forces Flutter to accurately count trailing empty lines in its height calculation.
+    final String textToMeasure = text.isEmpty ? '\u200B' : '$text\u200B';
+
+    final TextPainter painter = TextPainter(
+      text: TextSpan(text: textToMeasure, style: editorStyle),
+      textDirection: TextDirection.ltr,
+    );
+    painter.layout(maxWidth: renderBox.size.width);
+    final double realTextHeight = painter.height;
+
+    // 3. Only act if they clicked genuinely BELOW the existing text (including empty lines)
+    if (tapY > realTextHeight) {
+      final double lineHeight =
+          (editorStyle.fontSize ?? 16.0) * (editorStyle.height ?? 1.5);
+
+      // Calculate exactly how many newlines to reach the clicked coordinate
+      final int linesToAdd = ((tapY - realTextHeight) / lineHeight).floor() + 1;
+
+      if (linesToAdd > 0) {
+        final newlines = '\n' * linesToAdd;
+        final newText = text + newlines;
+
+        // Update the text and move the cursor
+        _bodyController.value = TextEditingValue(
+          text: newText,
+          selection: TextSelection.collapsed(offset: newText.length),
+        );
+
+        _notifyMergedContent();
+      }
+    }
+  }
+
   void _showRenameDialog() {
     final settings = SettingsService();
     final vault = VaultController();
@@ -321,6 +370,7 @@ class _RightSidebarState extends State<RightSidebar> {
                 children: [
                   Column(
                     children: [
+                      // THE HEADER TITLE
                       Container(
                         padding: EdgeInsets.fromLTRB(
                           40 * scale,
@@ -359,30 +409,50 @@ class _RightSidebarState extends State<RightSidebar> {
                           ),
                         ),
                       ),
+
+                      // THE MAIN EDITOR BODY
                       Expanded(
                         child: Container(
                           padding: EdgeInsets.symmetric(horizontal: 40 * scale),
-                          child: TextField(
-                            controller: _bodyController,
-                            onChanged: (_) => _notifyMergedContent(),
-                            style: editorStyle,
-                            maxLines: null,
-                            expands: true,
-                            keyboardType: TextInputType.multiline,
-                            cursorColor: settings.textColor,
-                            decoration: InputDecoration(
-                              border: InputBorder.none,
-                              hintText: "Start writing...",
-                              hintStyle: TextStyle(
-                                color: settings.dimTextColor.withOpacity(0.4),
-                                fontStyle: FontStyle.italic,
-                              ),
-                            ),
+                          // Builder allows us to get the precise RenderBox bounds for pointer math
+                          child: Builder(
+                            builder: (innerContext) {
+                              return Listener(
+                                onPointerUp: (event) => _handleEditorPointerUp(
+                                  event,
+                                  innerContext,
+                                  editorStyle,
+                                ),
+                                child: TextField(
+                                  controller: _bodyController,
+                                  onChanged: (_) => _notifyMergedContent(),
+                                  style: editorStyle,
+                                  maxLines: null,
+                                  expands: true,
+                                  keyboardType: TextInputType.multiline,
+                                  cursorColor: settings.textColor,
+                                  textAlignVertical: TextAlignVertical.top,
+                                  decoration: InputDecoration(
+                                    border: InputBorder.none,
+                                    contentPadding: EdgeInsets.zero,
+                                    hintText: "Start writing...",
+                                    hintStyle: TextStyle(
+                                      color: settings.dimTextColor.withOpacity(
+                                        0.4,
+                                      ),
+                                      fontStyle: FontStyle.italic,
+                                    ),
+                                  ),
+                                ),
+                              );
+                            },
                           ),
                         ),
                       ),
                     ],
                   ),
+
+                  // HAMBURGER MENU
                   Positioned(
                     top: 20 * scale,
                     right: 20 * scale,
@@ -464,11 +534,9 @@ class _RightSidebarState extends State<RightSidebar> {
               ),
             ),
 
-            // --- FIXED: BOTTOM TABS TRAY ---
+            // BOTTOM TABS TRAY LAYOUT
             Container(
-              height:
-                  36 *
-                  scale, // RESTORED to exactly match the left sidebar height (36)
+              height: 35 * scale,
               width: double.infinity,
               decoration: BoxDecoration(
                 color: settings.sidebarColor,
@@ -497,16 +565,13 @@ class _RightSidebarState extends State<RightSidebar> {
                   ),
                   child: Scrollbar(
                     controller: _tabScrollController,
-                    thumbVisibility: true, // Scrollbar visible
-                    thickness:
-                        2 *
-                        scale, // SLIM scrollbar overlays neatly at the bottom edge
+                    thumbVisibility: true,
+                    thickness: 2 * scale,
                     radius: const Radius.circular(2),
                     child: ListView.builder(
                       controller: _tabScrollController,
                       scrollDirection: Axis.horizontal,
                       itemCount: vault.openedTabs.length,
-                      // REMOVED the bottom padding to restore perfectly centered text vertically
                       itemBuilder: (context, index) {
                         final file = vault.openedTabs[index];
                         final fileName = file.uri.pathSegments.lastWhere(
