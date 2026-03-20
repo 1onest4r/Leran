@@ -468,7 +468,7 @@ class _RightSidebarState extends State<RightSidebar> {
             Container(
               height:
                   36 *
-                  scale, // RESTORED to exactly match the left sidebar height (35)
+                  scale, // RESTORED to exactly match the left sidebar height (36)
               width: double.infinity,
               decoration: BoxDecoration(
                 color: settings.sidebarColor,

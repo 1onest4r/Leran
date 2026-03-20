@@ -26,7 +26,17 @@ class VaultController extends ChangeNotifier {
   }
 
   void setVaultDirectory(String path) {
+    if (selectedDirectory == path)
+      return; // Ignore if they pick the same folder
+
     selectedDirectory = path;
+
+    // --- THE FIX: Clear old state to prevent broken references! ---
+    openedTabs.clear();
+    activeFile = null;
+    fileContent = "";
+    unsavedPaths.clear();
+
     refreshFileList();
     _startWatching(path);
     notifyListeners();
