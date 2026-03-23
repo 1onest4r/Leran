@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
-import '../../services/settings_service.dart';
-import '../../logic/vault_controller.dart';
+import '../../../services/settings_service.dart';
+import '../../../logic/vault_controller.dart';
 
 class AppDialogs {
   static void showSettings(BuildContext context) {

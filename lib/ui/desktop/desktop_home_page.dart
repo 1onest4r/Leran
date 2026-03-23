@@ -2,17 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import '../../logic/vault_controller.dart';
 import '../../services/settings_service.dart';
-import '../widgets/left_sidebar.dart';
-import '../widgets/right_sidebar.dart';
+import 'widgets/left_sidebar.dart';
+import 'widgets/right_sidebar.dart';
 
-class HomePage extends StatefulWidget {
-  const HomePage({super.key});
+class DesktopHomePage extends StatefulWidget {
+  const DesktopHomePage({super.key});
 
   @override
-  State<HomePage> createState() => _HomePageState();
+  State<DesktopHomePage> createState() => _DesktopHomePageState();
 }
 
-class _HomePageState extends State<HomePage> {
+class _DesktopHomePageState extends State<DesktopHomePage> {
   // --- RESIZE STATE ---
   double _dragWidth = 250.0;
   bool _isHoveringSash = false;

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/gestures.dart';
-import '../../logic/vault_controller.dart';
-import '../../services/settings_service.dart';
+import '../../../logic/vault_controller.dart';
+import '../../../services/settings_service.dart';
 import '../utils/app_dialogs.dart';
 
 class RightSidebar extends StatefulWidget {

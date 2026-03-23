@@ -1,6 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
-import '../../services/settings_service.dart';
+import '../../../services/settings_service.dart';
 
 class SearchDialog extends StatefulWidget {
   final List<FileSystemEntity> files;

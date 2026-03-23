@@ -1,8 +1,8 @@
 import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
-import '../../logic/vault_controller.dart';
-import '../../services/settings_service.dart';
+import '../../../logic/vault_controller.dart';
+import '../../../services/settings_service.dart';
 import '../utils/app_dialogs.dart';
 import '../utils/search_dialog.dart';
 

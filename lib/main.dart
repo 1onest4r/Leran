@@ -1,59 +1,60 @@
+import 'dart:io'; // Needed for Platform.isWindows, etc.
 import 'package:flutter/material.dart';
 import 'package:window_manager/window_manager.dart';
+
 import 'services/settings_service.dart';
-import 'ui/screens/home_page.dart';
+import 'ui/responsive_layout.dart'; // The router we created earlier
 
 void main() async {
+  // 1. Ensure Flutter is ready
   WidgetsFlutterBinding.ensureInitialized();
+
+  // 2. ONLY run window_manager on Desktop platforms!
+  if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
+    await windowManager.ensureInitialized();
+
+    WindowOptions windowOptions = const WindowOptions(
+      size: Size(900, 600),
+      minimumSize: Size(700, 450), // Your safe min-width logic
+      center: true,
+      titleBarStyle:
+          TitleBarStyle.hidden, // Or normal depending on your preference
+    );
+
+    windowManager.waitUntilReadyToShow(windowOptions, () async {
+      await windowManager.show();
+      await windowManager.focus();
+    });
+  }
+
+  // 3. Load your global settings before app starts
   await SettingsService().loadSettings();
 
-  // Initialize Window Manager
-  await windowManager.ensureInitialized();
-
-  WindowOptions windowOptions = const WindowOptions(
-    size: Size(1000, 700),
-    minimumSize: Size(650, 450), // Kept as fallback
-    center: true,
-    backgroundColor: Colors.transparent,
-    skipTaskbar: false,
-    titleBarStyle: TitleBarStyle.normal,
-    title: 'Digital Garden',
-  );
-
-  windowManager.waitUntilReadyToShow(windowOptions, () async {
-    // THE LINUX FIX: Explicitly enforce the minimum size AFTER the window is created
-    await windowManager.setMinimumSize(const Size(650, 450));
-
-    await windowManager.show();
-    await windowManager.focus();
-  });
-
-  runApp(const NoteApp());
+  // 4. Run the app
+  runApp(const MyApp());
 }
 
-class NoteApp extends StatelessWidget {
-  const NoteApp({super.key});
+class MyApp extends StatelessWidget {
+  const MyApp({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: SettingsService(),
-      builder: (context, child) {
-        final settings = SettingsService();
+    final settings = SettingsService();
 
+    return AnimatedBuilder(
+      animation: settings,
+      builder: (context, child) {
         return MaterialApp(
           debugShowCheckedModeBanner: false,
-          title: 'Digital Garden',
-          theme: settings.isDarkMode ? ThemeData.dark() : ThemeData.light(),
-          builder: (context, child) {
-            return MediaQuery(
-              data: MediaQuery.of(
-                context,
-              ).copyWith(textScaler: TextScaler.linear(settings.uiScale)),
-              child: child!,
-            );
-          },
-          home: const HomePage(),
+          title: 'Flutter Demo Vault',
+          theme: ThemeData(
+            useMaterial3: true,
+            brightness: settings.isDarkMode
+                ? Brightness.dark
+                : Brightness.light,
+          ),
+          // Route straight to our responsive router
+          home: const ResponsiveLayout(),
         );
       },
     );
