@@ -1,9 +1,10 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
-import 'package:flutter_demo/ui/mobile/mobile_search_page.dart';
-import '../../services/settings_service.dart';
-import 'widgets/mobile_drawer.dart';
-import 'widgets/note_card.dart';
-import 'mobile_editor_page.dart';
+import 'obsidian_theme.dart';
+import 'views/mobile_vault_view.dart';
+import 'views/mobile_search_view.dart';
+import 'views/mobile_settings_view.dart';
+import 'views/mobile_tags_view.dart'; // <--- NEW FOLDER TAB IMPORTED
 
 class MobileHomePage extends StatefulWidget {
   const MobileHomePage({super.key});
@@ -13,185 +14,69 @@ class MobileHomePage extends StatefulWidget {
 }
 
 class _MobileHomePageState extends State<MobileHomePage> {
-  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+  int _currentIndex = 0;
+
+  final List<Widget> _pages = const [
+    MobileVaultView(),
+    MobileSearchView(),
+    MobileTagsView(), // <--- ASSIGNED FOLDERS TAB HERE
+    MobileSettingsView(),
+  ];
 
   @override
   Widget build(BuildContext context) {
-    final settings = SettingsService();
-
     return Scaffold(
-      key: _scaffoldKey,
-      backgroundColor: settings.scaffoldColor,
-      drawer: const MobileDrawer(),
-      body: SafeArea(
-        child: Column(
-          children: [
-            // TOP HEADER & CONTROLS
-            _buildTopControls(settings),
+      backgroundColor: Obsidian.background,
+      extendBody: true,
+      body: IndexedStack(index: _currentIndex, children: _pages),
+      bottomNavigationBar: _buildGlassmorphicBottomBar(),
+    );
+  }
 
-            // TITLE BLOCK
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 24.0),
-              child: Column(
-                children: [
-                  Text(
-                    "Folders",
-                    style: TextStyle(
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold,
-                      color: settings.textColor,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    "3 notes",
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: settings.dimTextColor,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            // ALIGNMENT / FILTER BAR
-            Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 16.0,
-                vertical: 8.0,
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  Icon(Icons.sort, color: settings.dimTextColor, size: 16),
-                  const SizedBox(width: 8),
-                  Text(
-                    "Date modified",
-                    style: TextStyle(
-                      color: settings.dimTextColor,
-                      fontSize: 13,
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Container(height: 12, width: 1, color: settings.dimTextColor),
-                  const SizedBox(width: 8),
-                  Icon(
-                    Icons.arrow_downward,
-                    color: settings.dimTextColor,
-                    size: 16,
-                  ),
-                ],
-              ),
-            ),
-
-            // NOTES GRID
-            Expanded(
-              child: GridView.builder(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 10,
-                ),
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 2,
-                  crossAxisSpacing: 16,
-                  mainAxisSpacing: 20,
-                  childAspectRatio: 0.75,
-                ),
-                itemCount: 3,
-                itemBuilder: (context, index) {
-                  return NoteCard(
-                    title: index == 0 ? "Shopping List" : "Idea 01",
-                    subtitleText:
-                        "Note • ${DateTime.now().day}/0${DateTime.now().month}",
-                    timeText: "18:52",
-                    onTap: () {
-                      // Tap a note card to open editor!
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const MobileEditorPage(),
-                        ),
-                      );
-                    },
-                  );
-                },
-              ),
-            ),
-          ],
-        ),
-      ),
-      // THE NEW FAB STYLED WITH DESKTOP GREEN ACCENT
-      floatingActionButton: FloatingActionButton(
-        backgroundColor: settings.sidebarColor,
-        elevation: 2, // Slight lift
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-          side: BorderSide(
-            color: settings.dividerColor,
-            width: 1,
-          ), // Optional matching rim
-        ),
-        onPressed: () {
-          // Add a new note and open editor!
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => const MobileEditorPage()),
-          );
-        },
+  Widget _buildGlassmorphicBottomBar() {
+    return ClipRRect(
+      borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
         child: Container(
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: settings.accentColor,
-            shape: BoxShape.circle,
+          color: Obsidian.background.withOpacity(0.7),
+          height: 80,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              _navItem(0, Icons.description_outlined, Icons.description),
+              _navItem(1, Icons.search_outlined, Icons.search),
+              _navItem(
+                2,
+                Icons.folder_copy_outlined,
+                Icons.folder_copy,
+              ), // Updated Label icon to Folder Icon
+              _navItem(3, Icons.settings_outlined, Icons.settings),
+            ],
           ),
-          child: const Icon(Icons.edit, color: Colors.white, size: 20),
         ),
       ),
     );
   }
 
-  Widget _buildTopControls(SettingsService settings) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          // Drawer Trigger
-          Stack(
-            children: [
-              IconButton(
-                icon: Icon(Icons.menu, color: settings.textColor, size: 28),
-                onPressed: () => _scaffoldKey.currentState?.openDrawer(),
-              ),
-              Positioned(
-                top: 8,
-                right: 8,
-                child: Container(
-                  width: 8,
-                  height: 8,
-                  decoration: BoxDecoration(
-                    color: settings.accentColor,
-                    shape: BoxShape.circle,
-                  ),
-                ),
-              ),
-            ],
-          ),
-
-          // REMOVED 3-DOTS & PDF; kept standard search icon
-          IconButton(
-            icon: Icon(Icons.search, color: settings.textColor),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const MobileSearchPage(),
-                ),
-              );
-            },
-          ),
-        ],
+  Widget _navItem(int index, IconData inactiveIcon, IconData activeIcon) {
+    final isActive = _currentIndex == index;
+    return GestureDetector(
+      onTap: () => setState(() => _currentIndex = index),
+      behavior: HitTestBehavior.opaque,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        curve: Curves.easeOut,
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: isActive ? Obsidian.emerald : Colors.transparent,
+          borderRadius: BorderRadius.circular(24),
+        ),
+        child: Icon(
+          isActive ? activeIcon : inactiveIcon,
+          color: isActive ? Obsidian.background : Obsidian.textDim,
+          size: 26,
+        ),
       ),
     );
   }
