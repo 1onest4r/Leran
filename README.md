@@ -23,9 +23,9 @@ keep it minimal
 
 TODO:
 fix overflowing hasn't fixed on the linux make it cross platform (kind of fixed now?)
-fix in note taking section the cursor not moving into the blank space
-
+fix on windows the top bar is not working fix that
 add splash screen for loading stuffs
+
 add latex (https://www.latex-project.org/)
 add scrollbar to the bottom of tab section
 add text styling semantics
