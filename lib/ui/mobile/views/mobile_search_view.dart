@@ -1,5 +1,9 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import '../obsidian_theme.dart';
+import '../../../logic/vault_controller.dart';
+import '../../../services/file_service.dart';
+import 'mobile_vault_view.dart'; // To reuse DynamicNoteCard
 
 class MobileSearchView extends StatefulWidget {
   const MobileSearchView({super.key});
@@ -10,35 +14,104 @@ class MobileSearchView extends StatefulWidget {
 
 class _MobileSearchViewState extends State<MobileSearchView> {
   final TextEditingController _searchController = TextEditingController();
+  final VaultController _vault = VaultController();
+
   String _query = '';
+  List<FileSystemEntity> _searchResults = [];
+  List<String> _allVaultTags = [];
+  static List<String> _recentQueries =
+      []; // Static to persist during app session
+
+  bool _isSearching = false;
 
   @override
-  void dispose() {
-    _searchController.dispose();
-    super.dispose();
+  void initState() {
+    super.initState();
+    _loadTags();
+  }
+
+  Future<void> _loadTags() async {
+    final tags = await _vault.getAllUniqueTags();
+    if (mounted) setState(() => _allVaultTags = tags);
+  }
+
+  void _performSearch(String query) async {
+    if (query.isEmpty) {
+      setState(() {
+        _query = '';
+        _searchResults = [];
+        _isSearching = false;
+      });
+      return;
+    }
+
+    setState(() => _isSearching = true);
+
+    final List<FileSystemEntity> results = [];
+    final lowerQuery = query.toLowerCase();
+
+    for (final file in _vault.files) {
+      final filename = file.uri.pathSegments.last.toLowerCase();
+      // Search title
+      if (filename.contains(lowerQuery)) {
+        results.add(file);
+        continue;
+      }
+
+      // Search content
+      try {
+        final content = await FileService.readFile(file);
+        if (content.toLowerCase().contains(lowerQuery)) {
+          results.add(file);
+        }
+      } catch (_) {}
+    }
+
+    if (mounted) {
+      setState(() {
+        _query = query;
+        _searchResults = results;
+        _isSearching = false;
+      });
+    }
+  }
+
+  void _saveQuery(String query) {
+    if (query.trim().isEmpty) return;
+    setState(() {
+      _recentQueries.remove(query); // Remove duplicate
+      _recentQueries.insert(0, query); // Add to top
+      if (_recentQueries.length > 5) _recentQueries.removeLast();
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.transparent, // Gets background from IndexedStack
+      backgroundColor: Colors.transparent,
       appBar: _buildTopHeader(),
       body: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+        child: Column(
           children: [
-            // Search Input Container
-            _buildSearchBar(),
-            const SizedBox(height: 32),
-
-            // Filter Chips Section
-            _buildFilterChips(),
-            const SizedBox(height: 40),
-
-            // Conditional Logic: Show Recent Queries if empty, otherwise show Results/Empty state
-            if (_query.isEmpty) _buildRecentQueries() else _buildEmptyState(),
-
-            const SizedBox(height: 100), // Bottom Navigation bar padding buffer
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              child: _buildSearchBar(),
+            ),
+            Expanded(
+              child: ListView(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                children: [
+                  if (_query.isEmpty) ...[
+                    _buildFilterChips(),
+                    const SizedBox(height: 40),
+                    _buildRecentQueries(),
+                  ] else ...[
+                    _buildResultsList(),
+                  ],
+                  const SizedBox(height: 100),
+                ],
+              ),
+            ),
           ],
         ),
       ),
@@ -60,24 +133,6 @@ class _MobileSearchViewState extends State<MobileSearchView> {
           letterSpacing: 2.0,
         ),
       ),
-      actions: [
-        // App Logo Placeholder matching Vault View
-        Container(
-          height: 36,
-          width: 36,
-          margin: const EdgeInsets.only(right: 24),
-          decoration: BoxDecoration(
-            color: Obsidian.surfaceHighest,
-            shape: BoxShape.circle,
-            border: Border.all(color: Obsidian.textDim.withOpacity(0.2)),
-          ),
-          child: const Icon(
-            Icons.diamond_outlined,
-            color: Obsidian.text,
-            size: 20,
-          ),
-        ),
-      ],
     );
   }
 
@@ -87,60 +142,50 @@ class _MobileSearchViewState extends State<MobileSearchView> {
         color: Obsidian.surfaceHighest,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          // Subtle glow effect when typing
           color: _query.isNotEmpty
               ? Obsidian.emerald.withOpacity(0.3)
               : Colors.transparent,
-          width: 1,
         ),
-        boxShadow: _query.isNotEmpty
-            ? [
-                BoxShadow(
-                  color: Obsidian.emerald.withOpacity(0.1),
-                  blurRadius: 20,
-                  spreadRadius: 0,
-                ),
-              ]
-            : [],
       ),
       child: TextField(
         controller: _searchController,
         style: Obsidian.inter.copyWith(color: Obsidian.text, fontSize: 18),
         cursorColor: Obsidian.emerald,
+        textInputAction: TextInputAction.search,
+        onSubmitted: (val) => _saveQuery(val),
         decoration: InputDecoration(
           prefixIcon: Icon(
             Icons.search,
             color: _query.isNotEmpty ? Obsidian.emerald : Obsidian.textDim,
           ),
-
-          // Clear button if there's text, otherwise NO mic (completely clean input box)
           suffixIcon: _query.isNotEmpty
               ? IconButton(
                   icon: const Icon(Icons.close, color: Obsidian.textDim),
                   onPressed: () {
                     _searchController.clear();
-                    setState(() => _query = "");
-                    FocusScope.of(context).unfocus(); // Drops keyboard
+                    _performSearch("");
+                    FocusScope.of(context).unfocus();
                   },
                 )
               : null,
-
-          hintText: "Search through the obsidian...",
+          hintText: "Search titles or content...",
           hintStyle: const TextStyle(color: Obsidian.textDim),
           border: InputBorder.none,
           contentPadding: const EdgeInsets.symmetric(vertical: 16),
         ),
-        onChanged: (val) => setState(() => _query = val),
+        onChanged: _performSearch,
       ),
     );
   }
 
   Widget _buildFilterChips() {
+    if (_allVaultTags.isEmpty) return const SizedBox.shrink();
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          "REFINE SEARCH",
+          "REFINE BY TAG",
           style: Obsidian.manrope.copyWith(
             color: Obsidian.textDim,
             fontSize: 11,
@@ -152,58 +197,47 @@ class _MobileSearchViewState extends State<MobileSearchView> {
         Wrap(
           spacing: 12,
           runSpacing: 12,
-          children: [
-            _filterChip("Pinned", Icons.push_pin, isActive: true),
-            _filterChip("Work", Icons.work_outline),
-            _filterChip("Ideas", Icons.lightbulb_outline),
-            _filterChip("Last 7 Days", Icons.calendar_today),
-            _filterChip("Tags", Icons.sell_outlined),
-          ],
+          children: _allVaultTags.map((tag) => _tagChip(tag)).toList(),
         ),
       ],
     );
   }
 
-  Widget _filterChip(String label, IconData icon, {bool isActive = false}) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-      decoration: BoxDecoration(
-        color: isActive ? Obsidian.emerald : Obsidian.surfaceHigh,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(
-          color: isActive
-              ? Colors.transparent
-              : Obsidian.surfaceHighest.withOpacity(0.5),
+  Widget _tagChip(String tag) {
+    return GestureDetector(
+      onTap: () {
+        final tagQuery = "#$tag";
+        _searchController.text = tagQuery;
+        _performSearch(tagQuery);
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        decoration: BoxDecoration(
+          color: Obsidian.surfaceHigh,
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(color: Obsidian.emerald.withOpacity(0.1)),
         ),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            icon,
-            size: 18,
-            color: isActive ? Obsidian.emeraldDim : Obsidian.textDim,
-          ),
-          const SizedBox(width: 8),
-          Text(
-            label,
-            style: Obsidian.manrope.copyWith(
-              color: isActive ? Obsidian.emeraldDim : Obsidian.textDim,
-              fontSize: 13,
-              fontWeight: isActive ? FontWeight.w800 : FontWeight.w600,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.sell_outlined, size: 14, color: Obsidian.emerald),
+            const SizedBox(width: 8),
+            Text(
+              tag,
+              style: Obsidian.manrope.copyWith(
+                color: Obsidian.text,
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
 
   Widget _buildRecentQueries() {
-    final recentSearches = [
-      "Digital obsidian design philosophy",
-      "Material 3 elevation system",
-      "Emerald gemstone palette hex codes",
-    ];
+    if (_recentQueries.isEmpty) return const SizedBox.shrink();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -221,9 +255,9 @@ class _MobileSearchViewState extends State<MobileSearchView> {
               ),
             ),
             TextButton(
-              onPressed: () {},
+              onPressed: () => setState(() => _recentQueries.clear()),
               child: Text(
-                "CLEAR ALL",
+                "CLEAR",
                 style: Obsidian.manrope.copyWith(
                   color: Obsidian.emerald,
                   fontSize: 11,
@@ -234,74 +268,88 @@ class _MobileSearchViewState extends State<MobileSearchView> {
           ],
         ),
         const SizedBox(height: 8),
-        ...recentSearches.map(
-          (query) => Padding(
-            padding: const EdgeInsets.only(bottom: 4.0),
-            child: ListTile(
-              contentPadding: EdgeInsets.zero,
-              leading: const Icon(Icons.history, color: Obsidian.textDim),
-              title: Text(
-                query,
-                style: Obsidian.inter.copyWith(color: Obsidian.text),
-              ),
-              trailing: const Icon(
-                Icons.close,
-                color: Obsidian.textDim,
-                size: 16,
-              ),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              onTap: () => setState(() {
-                _searchController.text = query;
-                _query = query;
-              }),
+        ..._recentQueries.map(
+          (q) => ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: const Icon(
+              Icons.history,
+              color: Obsidian.textDim,
+              size: 20,
             ),
+            title: Text(
+              q,
+              style: Obsidian.inter.copyWith(color: Obsidian.text),
+            ),
+            trailing: const Icon(
+              Icons.arrow_outward,
+              color: Obsidian.textDim,
+              size: 16,
+            ),
+            onTap: () {
+              _searchController.text = q;
+              _performSearch(q);
+            },
           ),
         ),
       ],
     );
   }
 
+  Widget _buildResultsList() {
+    if (_isSearching) {
+      return const Padding(
+        padding: EdgeInsets.only(top: 40),
+        child: Center(
+          child: CircularProgressIndicator(color: Obsidian.emerald),
+        ),
+      );
+    }
+
+    if (_searchResults.isEmpty) {
+      return _buildEmptyState();
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          "RESULTS FOUND: ${_searchResults.length}",
+          style: Obsidian.manrope.copyWith(
+            color: Obsidian.textDim,
+            fontSize: 11,
+            fontWeight: FontWeight.bold,
+            letterSpacing: 1.5,
+          ),
+        ),
+        const SizedBox(height: 20),
+        ..._searchResults.map((file) => DynamicNoteCard(file: file)),
+      ],
+    );
+  }
+
   Widget _buildEmptyState() {
     return Padding(
-      padding: const EdgeInsets.only(top: 40),
+      padding: const EdgeInsets.only(top: 60),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Container(
-            height: 120,
-            width: 120,
-            decoration: BoxDecoration(
-              color: Obsidian.emerald.withOpacity(0.05),
-              shape: BoxShape.circle,
-            ),
-            child: Center(
-              child: Icon(
-                Icons.search_off_rounded,
-                size: 60,
-                color: Obsidian.emerald.withOpacity(0.4),
-              ),
-            ),
+          Icon(
+            Icons.search_off_rounded,
+            size: 64,
+            color: Obsidian.textDim.withOpacity(0.2),
           ),
           const SizedBox(height: 24),
           Text(
-            "Void of Results",
+            "No fragments found",
             style: Obsidian.manrope.copyWith(
               color: Obsidian.text,
-              fontSize: 24,
-              fontWeight: FontWeight.w800,
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
             ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 8),
           Text(
-            "We couldn't find any fragments matching '$_query'. Try adjusting the emerald filters or broadening your terms.",
-            textAlign: TextAlign.center,
-            style: Obsidian.inter.copyWith(
-              color: Obsidian.textDim,
-              fontSize: 14,
-              height: 1.5,
-            ),
+            "Try a different term or a specific tag.",
+            style: Obsidian.inter.copyWith(color: Obsidian.textDim),
           ),
         ],
       ),

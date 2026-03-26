@@ -88,7 +88,7 @@ class _MobileTagsViewState extends State<MobileTagsView> {
         const SizedBox(height: 12),
         Center(
           child: Text(
-            'Organized',
+            'Containers',
             style: Obsidian.manrope.copyWith(
               color: Obsidian.text,
               fontSize: 32,

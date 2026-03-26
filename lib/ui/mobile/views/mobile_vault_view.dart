@@ -28,7 +28,7 @@ class MobileVaultView extends StatelessWidget {
     return AnimatedBuilder(
       animation: vault,
       builder: (context, _) {
-        final List<FileSystemEntity> notes = vault.files;
+        final List<FileSystemEntity> notes = vault.sortedFiles;
 
         return Scaffold(
           backgroundColor: Colors.transparent,
@@ -48,7 +48,10 @@ class MobileVaultView extends StatelessWidget {
                       if (index == notes.length) {
                         return const SizedBox(height: 120);
                       }
-                      return DynamicNoteCard(file: notes[index]);
+                      return DynamicNoteCard(
+                        file: notes[index],
+                        isPinned: vault.isPinned(notes[index].path),
+                      );
                     },
                   ),
           ),
@@ -244,7 +247,9 @@ class MobileVaultView extends StatelessWidget {
 
 class DynamicNoteCard extends StatelessWidget {
   final FileSystemEntity file;
-  const DynamicNoteCard({super.key, required this.file});
+  final bool isPinned;
+
+  const DynamicNoteCard({super.key, required this.file, this.isPinned = false});
 
   String _formatDate(DateTime date) {
     const months = [
@@ -293,15 +298,22 @@ class DynamicNoteCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Date stamp
-            Text(
-              _formatDate(stat.modified),
-              style: Obsidian.inter.copyWith(
-                color: Obsidian.textDim.withOpacity(0.8),
-                fontSize: 10,
-                letterSpacing: 1.5,
-                fontWeight: FontWeight.w700,
-              ),
+            // Date stamp and Pin Indicator
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  _formatDate(stat.modified),
+                  style: Obsidian.inter.copyWith(
+                    color: Obsidian.textDim.withOpacity(0.8),
+                    fontSize: 10,
+                    letterSpacing: 1.5,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                if (isPinned)
+                  const Icon(Icons.push_pin, color: Obsidian.emerald, size: 14),
+              ],
             ),
             const SizedBox(height: 12),
 

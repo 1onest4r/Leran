@@ -18,6 +18,9 @@ class VaultController extends ChangeNotifier {
   String fileContent = '';
   final Set<String> unsavedPaths = {};
 
+  // Pinned Notes tracking
+  final Set<String> pinnedFileNames = {};
+
   StreamSubscription<FileSystemEvent>? _dirWatcher;
 
   @override
@@ -28,12 +31,9 @@ class VaultController extends ChangeNotifier {
 
   // --- Tag Helpers -----------------------------------------------------------
 
-  /// Returns the tags currently embedded in [content].
   List<String> getTagsForContent(String content) =>
       TagService.parseTags(content);
 
-  /// Reads every file in the vault and returns a tag -> [filePath] map.
-  /// Used by MobileTagsView to build live groups.
   Future<Map<String, List<String>>> getAllTagGroups() async {
     final Map<String, String> contentMap = {};
     for (final f in files) {
@@ -44,7 +44,6 @@ class VaultController extends ChangeNotifier {
     return TagService.buildTagGroups(contentMap);
   }
 
-  /// Returns the display title for a file path (strips extension).
   String titleFromPath(String path) {
     final filename = path.split(Platform.pathSeparator).last;
     return filename
@@ -52,9 +51,63 @@ class VaultController extends ChangeNotifier {
         .replaceAll(RegExp(r'\.txt$', caseSensitive: false), '');
   }
 
+  // --- Pinned Notes Logic ----------------------------------------------------
+
+  bool isPinned(String? path) {
+    if (path == null) return false;
+    final fileName = path.split(Platform.pathSeparator).last;
+    return pinnedFileNames.contains(fileName);
+  }
+
+  void setPin(String path, bool pinned) {
+    final fileName = path.split(Platform.pathSeparator).last;
+    if (pinned) {
+      pinnedFileNames.add(fileName);
+    } else {
+      pinnedFileNames.remove(fileName);
+    }
+    _savePins();
+    notifyListeners();
+  }
+
+  Future<void> _loadPins() async {
+    if (selectedDirectory == null) return;
+    final pinFile = File(
+      '$selectedDirectory${Platform.pathSeparator}.obsidian_pinned',
+    );
+    if (await pinFile.exists()) {
+      try {
+        final lines = await pinFile.readAsLines();
+        pinnedFileNames.clear();
+        pinnedFileNames.addAll(lines.where((l) => l.isNotEmpty));
+      } catch (e) {
+        debugPrint('Error loading pins: $e');
+      }
+    }
+  }
+
+  Future<void> _savePins() async {
+    if (selectedDirectory == null) return;
+    final pinFile = File(
+      '$selectedDirectory${Platform.pathSeparator}.obsidian_pinned',
+    );
+    try {
+      await pinFile.writeAsString(pinnedFileNames.join('\n'));
+    } catch (e) {
+      debugPrint('Error saving pins: $e');
+    }
+  }
+
+  /// Returns files sorted with pinned notes at the top without extra grouping
+  List<FileSystemEntity> get sortedFiles {
+    final pinned = files.where((f) => isPinned(f.path)).toList();
+    final unpinned = files.where((f) => !isPinned(f.path)).toList();
+    return [...pinned, ...unpinned];
+  }
+
   // --- Vault Directory -------------------------------------------------------
 
-  void setVaultDirectory(String path) {
+  void setVaultDirectory(String path) async {
     if (selectedDirectory == path) return;
 
     selectedDirectory = path;
@@ -62,10 +115,12 @@ class VaultController extends ChangeNotifier {
     activeFile = null;
     fileContent = '';
     unsavedPaths.clear();
-
-    refreshFileList();
-    _startWatching(path);
+    pinnedFileNames.clear();
     notifyListeners();
+
+    await _loadPins();
+    await refreshFileList();
+    _startWatching(path);
   }
 
   Future<void> refreshFileList() async {
@@ -152,9 +207,6 @@ class VaultController extends ChangeNotifier {
     }
   }
 
-  /// Creates a new note on disk and sets it as [activeFile] WITHOUT reading
-  /// back from disk so the editor's updateContent + saveActiveNote writes
-  /// the real typed content with no race condition.
   Future<void> createNewNote(String fileName) async {
     if (selectedDirectory == null) return;
 
@@ -185,6 +237,12 @@ class VaultController extends ChangeNotifier {
       openedTabs.removeWhere((f) => f.path == path);
       files.removeWhere((f) => f.path == path);
       unsavedPaths.remove(path);
+
+      final fileName = path.split(Platform.pathSeparator).last;
+      if (pinnedFileNames.contains(fileName)) {
+        pinnedFileNames.remove(fileName);
+        _savePins();
+      }
 
       if (openedTabs.isNotEmpty) {
         openFile(openedTabs.last);
@@ -230,6 +288,15 @@ class VaultController extends ChangeNotifier {
         unsavedPaths.remove(oldPath);
         unsavedPaths.add(newPath);
       }
+
+      final oldName = oldPath.split(Platform.pathSeparator).last;
+      final newNameOnly = newPath.split(Platform.pathSeparator).last;
+      if (pinnedFileNames.contains(oldName)) {
+        pinnedFileNames.remove(oldName);
+        pinnedFileNames.add(newNameOnly);
+        _savePins();
+      }
+
       notifyListeners();
       return true;
     } catch (e) {
@@ -267,5 +334,17 @@ class VaultController extends ChangeNotifier {
       debugPrint('Save failed: $e');
       return false;
     }
+  }
+
+  Future<List<String>> getAllUniqueTags() async {
+    final Set<String> allTags = {};
+    for (final file in files) {
+      try {
+        final content = await FileService.readFile(file);
+        allTags.addAll(TagService.parseTags(content));
+      } catch (_) {}
+    }
+    final List<String> sortedTags = allTags.toList()..sort();
+    return sortedTags;
   }
 }

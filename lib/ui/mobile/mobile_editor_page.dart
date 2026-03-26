@@ -22,9 +22,12 @@ class _MobileEditorPageState extends State<MobileEditorPage> {
 
   late TextEditingController _titleController;
   late TextEditingController _bodyController;
+  late FocusNode _bodyFocusNode;
+  late ScrollController _scrollController;
 
   bool _isLoading = true;
   bool _isDeleted = false;
+  bool _isPinned = false;
   String? _originalFilename;
 
   // Live list of tags derived from the current body content
@@ -35,12 +38,15 @@ class _MobileEditorPageState extends State<MobileEditorPage> {
     super.initState();
     _titleController = TextEditingController();
     _bodyController = TextEditingController();
+    _bodyFocusNode = FocusNode();
+    _scrollController = ScrollController();
     _initializeEditor();
   }
 
   Future<void> _initializeEditor() async {
     if (widget.file != null) {
       _originalFilename = widget.file!.uri.pathSegments.last;
+      _isPinned = _vault.isPinned(widget.file!.path);
       await _vault.openFile(widget.file!);
       final content = _vault.fileContent;
 
@@ -118,6 +124,10 @@ class _MobileEditorPageState extends State<MobileEditorPage> {
         await _vault.createNewNote(uniqueFileName);
         _vault.updateContent(mergedContent);
         await _vault.saveActiveNote();
+
+        if (_vault.activeFile != null) {
+          _vault.setPin(_vault.activeFile!.path, _isPinned);
+        }
       }
     } else {
       _vault.updateContent(mergedContent);
@@ -131,6 +141,10 @@ class _MobileEditorPageState extends State<MobileEditorPage> {
         }
       }
       await _vault.saveActiveNote();
+
+      if (_vault.activeFile != null) {
+        _vault.setPin(_vault.activeFile!.path, _isPinned);
+      }
     }
 
     if (mounted) Navigator.pop(context);
@@ -300,6 +314,8 @@ class _MobileEditorPageState extends State<MobileEditorPage> {
   void dispose() {
     _titleController.dispose();
     _bodyController.dispose();
+    _bodyFocusNode.dispose();
+    _scrollController.dispose();
     super.dispose();
   }
 
@@ -328,8 +344,15 @@ class _MobileEditorPageState extends State<MobileEditorPage> {
           ),
           actions: [
             IconButton(
-              icon: const Icon(Icons.check, color: Obsidian.emerald),
-              onPressed: _handleSaveAndExit,
+              icon: Icon(
+                _isPinned ? Icons.push_pin : Icons.push_pin_outlined,
+                color: _isPinned ? Obsidian.emerald : Obsidian.textDim,
+              ),
+              onPressed: () {
+                setState(() {
+                  _isPinned = !_isPinned;
+                });
+              },
             ),
           ],
         ),
@@ -370,24 +393,96 @@ class _MobileEditorPageState extends State<MobileEditorPage> {
                 ),
 
                 // Body field
+                // This entire layout block magically captures void-taps and maps
+                // them to dynamically appended lines, saving you from pressing enter endlessly.
                 Expanded(
-                  child: TextField(
-                    controller: _bodyController,
-                    onChanged: _onContentChanged,
-                    maxLines: null,
-                    expands: true,
-                    textCapitalization: TextCapitalization.sentences,
-                    cursorColor: Obsidian.emerald,
-                    style: Obsidian.inter.copyWith(
-                      color: Obsidian.text,
-                      fontSize: _settings.fontSize,
-                      height: 1.6,
-                    ),
-                    decoration: const InputDecoration(
-                      border: InputBorder.none,
-                      hintText: 'Transcribe the record...',
-                      hintStyle: TextStyle(color: Colors.white24),
-                    ),
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      return Listener(
+                        behavior: HitTestBehavior.translucent,
+                        onPointerUp: (event) {
+                          if (!_bodyFocusNode.hasFocus) {
+                            FocusScope.of(context).requestFocus(_bodyFocusNode);
+                          }
+
+                          // Get the absolute position of where the user tapped on the scrollable canvas
+                          final double tapY = event.localPosition.dy;
+                          final double scrollOffset =
+                              _scrollController.hasClients
+                              ? _scrollController.offset
+                              : 0.0;
+                          final double trueTapY = tapY + scrollOffset;
+
+                          // Format our text string exactly as the TextPainter will see it
+                          String textToMeasure = _bodyController.text;
+                          if (textToMeasure.isEmpty) {
+                            textToMeasure = ' ';
+                          } else if (textToMeasure.endsWith('\n')) {
+                            textToMeasure += ' ';
+                          }
+
+                          // Establish painter to find the exact rendering height (accounting for wrapping!)
+                          final TextPainter painter = TextPainter(
+                            text: TextSpan(
+                              text: textToMeasure,
+                              style: Obsidian.inter.copyWith(
+                                color: Obsidian.text,
+                                fontSize: _settings.fontSize,
+                                height: 1.6,
+                              ),
+                            ),
+                            textDirection: TextDirection.ltr,
+                          );
+
+                          painter.layout(maxWidth: constraints.maxWidth);
+                          final double textHeight = painter.height;
+
+                          // Only manipulate lines if they tapped visibly lower than our active text bound
+                          if (trueTapY > textHeight + 10) {
+                            final double diff = trueTapY - textHeight;
+                            final double lineHeight = _settings.fontSize * 1.6;
+
+                            // Map empty pixel space delta back into expected line breaks
+                            final int linesToAdd = (diff / lineHeight).round();
+
+                            if (linesToAdd > 0) {
+                              Future.delayed(Duration.zero, () {
+                                final String newText =
+                                    _bodyController.text + ('\n' * linesToAdd);
+                                _bodyController.value = TextEditingValue(
+                                  text: newText,
+                                  selection: TextSelection.collapsed(
+                                    offset: newText.length,
+                                  ),
+                                );
+                                _onContentChanged('');
+                              });
+                            }
+                          }
+                        },
+                        child: TextField(
+                          focusNode: _bodyFocusNode,
+                          controller: _bodyController,
+                          scrollController: _scrollController,
+                          onChanged: _onContentChanged,
+                          maxLines: null,
+                          expands: true,
+                          textAlignVertical: TextAlignVertical.top,
+                          textCapitalization: TextCapitalization.sentences,
+                          cursorColor: Obsidian.emerald,
+                          style: Obsidian.inter.copyWith(
+                            color: Obsidian.text,
+                            fontSize: _settings.fontSize,
+                            height: 1.6,
+                          ),
+                          decoration: const InputDecoration(
+                            border: InputBorder.none,
+                            hintText: 'Transcribe the record...',
+                            hintStyle: TextStyle(color: Colors.white24),
+                          ),
+                        ),
+                      );
+                    },
                   ),
                 ),
               ],
