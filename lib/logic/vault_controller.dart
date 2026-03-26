@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import '../services/file_service.dart';
 import '../services/settings_service.dart';
+import '../services/tag_service.dart';
 
 class VaultController extends ChangeNotifier {
   static final VaultController _instance = VaultController._internal();
@@ -14,7 +15,7 @@ class VaultController extends ChangeNotifier {
   List<FileSystemEntity> openedTabs = [];
   FileSystemEntity? activeFile;
 
-  String fileContent = "";
+  String fileContent = '';
   final Set<String> unsavedPaths = {};
 
   StreamSubscription<FileSystemEvent>? _dirWatcher;
@@ -25,16 +26,41 @@ class VaultController extends ChangeNotifier {
     super.dispose();
   }
 
+  // --- Tag Helpers -----------------------------------------------------------
+
+  /// Returns the tags currently embedded in [content].
+  List<String> getTagsForContent(String content) =>
+      TagService.parseTags(content);
+
+  /// Reads every file in the vault and returns a tag -> [filePath] map.
+  /// Used by MobileTagsView to build live groups.
+  Future<Map<String, List<String>>> getAllTagGroups() async {
+    final Map<String, String> contentMap = {};
+    for (final f in files) {
+      try {
+        contentMap[f.path] = await FileService.readFile(f);
+      } catch (_) {}
+    }
+    return TagService.buildTagGroups(contentMap);
+  }
+
+  /// Returns the display title for a file path (strips extension).
+  String titleFromPath(String path) {
+    final filename = path.split(Platform.pathSeparator).last;
+    return filename
+        .replaceAll(RegExp(r'\.md$', caseSensitive: false), '')
+        .replaceAll(RegExp(r'\.txt$', caseSensitive: false), '');
+  }
+
+  // --- Vault Directory -------------------------------------------------------
+
   void setVaultDirectory(String path) {
-    if (selectedDirectory == path)
-      return; // Ignore if they pick the same folder
+    if (selectedDirectory == path) return;
 
     selectedDirectory = path;
-
-    // --- THE FIX: Clear old state to prevent broken references! ---
     openedTabs.clear();
     activeFile = null;
-    fileContent = "";
+    fileContent = '';
     unsavedPaths.clear();
 
     refreshFileList();
@@ -51,9 +77,7 @@ class VaultController extends ChangeNotifier {
 
   void _startWatching(String path) {
     _dirWatcher?.cancel();
-    _dirWatcher = Directory(path).watch().listen((event) {
-      refreshFileList();
-    });
+    _dirWatcher = Directory(path).watch().listen((_) => refreshFileList());
   }
 
   Future<void> renameVault(String newName) async {
@@ -86,15 +110,18 @@ class VaultController extends ChangeNotifier {
         final fileName = p.split(Platform.pathSeparator).last;
         newUnsaved.add('${newDir.path}${Platform.pathSeparator}$fileName');
       }
-      unsavedPaths.clear();
-      unsavedPaths.addAll(newUnsaved);
+      unsavedPaths
+        ..clear()
+        ..addAll(newUnsaved);
 
       _startWatching(newDir.path);
       notifyListeners();
     } catch (e) {
-      debugPrint("Folder rename failed: $e");
+      debugPrint('Folder rename failed: $e');
     }
   }
+
+  // --- File Operations -------------------------------------------------------
 
   Future<void> openFile(FileSystemEntity file) async {
     if (activeFile != null && unsavedPaths.contains(activeFile!.path)) {
@@ -118,19 +145,36 @@ class VaultController extends ChangeNotifier {
         openFile(openedTabs.last);
       } else {
         activeFile = null;
-        fileContent = "";
+        fileContent = '';
       }
     } else {
       notifyListeners();
     }
   }
 
+  /// Creates a new note on disk and sets it as [activeFile] WITHOUT reading
+  /// back from disk so the editor's updateContent + saveActiveNote writes
+  /// the real typed content with no race condition.
   Future<void> createNewNote(String fileName) async {
     if (selectedDirectory == null) return;
+
     await FileService.createNote(selectedDirectory!, fileName);
     await refreshFileList();
-    final newFile = files.firstWhere((f) => f.path.contains(fileName));
-    openFile(newFile);
+
+    final newFile = files.firstWhere(
+      (f) => f.uri.pathSegments.last == fileName,
+      orElse: () =>
+          File('$selectedDirectory${Platform.pathSeparator}$fileName'),
+    );
+
+    activeFile = newFile;
+    fileContent = '';
+
+    if (!openedTabs.any((f) => f.path == newFile.path)) {
+      openedTabs.add(newFile);
+    }
+
+    notifyListeners();
   }
 
   Future<void> deleteActiveNote() async {
@@ -142,15 +186,15 @@ class VaultController extends ChangeNotifier {
       files.removeWhere((f) => f.path == path);
       unsavedPaths.remove(path);
 
-      if (openedTabs.isNotEmpty)
+      if (openedTabs.isNotEmpty) {
         openFile(openedTabs.last);
-      else {
+      } else {
         activeFile = null;
-        fileContent = "";
+        fileContent = '';
       }
       notifyListeners();
     } catch (e) {
-      debugPrint("Error deleting: $e");
+      debugPrint('Error deleting: $e');
     }
   }
 
@@ -169,6 +213,7 @@ class VaultController extends ChangeNotifier {
     try {
       if (oldPath == newPath) return true;
       if (await File(newPath).exists()) return false;
+
       final newFile = await file.rename(newPath);
       activeFile = newFile;
 
@@ -188,7 +233,7 @@ class VaultController extends ChangeNotifier {
       notifyListeners();
       return true;
     } catch (e) {
-      debugPrint("Rename failed: $e");
+      debugPrint('Rename failed: $e');
       return false;
     }
   }
@@ -197,9 +242,9 @@ class VaultController extends ChangeNotifier {
     if (activeFile == null) return;
     fileContent = newContent;
 
-    if (SettingsService().autoSave)
+    if (SettingsService().autoSave) {
       saveFileToDisk(activeFile!.path, newContent);
-    else {
+    } else {
       if (!unsavedPaths.contains(activeFile!.path)) {
         unsavedPaths.add(activeFile!.path);
         notifyListeners();
@@ -208,10 +253,8 @@ class VaultController extends ChangeNotifier {
   }
 
   Future<bool> saveActiveNote() async {
-    if (activeFile != null) {
-      return await saveFileToDisk(activeFile!.path, fileContent);
-    }
-    return false;
+    if (activeFile == null) return false;
+    return await saveFileToDisk(activeFile!.path, fileContent);
   }
 
   Future<bool> saveFileToDisk(String path, String content) async {
@@ -221,7 +264,7 @@ class VaultController extends ChangeNotifier {
       notifyListeners();
       return true;
     } catch (e) {
-      debugPrint("Save failed: $e");
+      debugPrint('Save failed: $e');
       return false;
     }
   }

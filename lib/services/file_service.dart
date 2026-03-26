@@ -25,23 +25,52 @@ class FileService {
     }
   }
 
+  /// Creates a new note file. The first line is the clean title (no extension,
+  /// no timestamp) so the editor can parse it back correctly on re-open.
   static Future<void> createNote(String directoryPath, String fileName) async {
     if (!fileName.endsWith('.md') && !fileName.endsWith('.txt')) {
-      fileName = '$fileName.txt';
+      fileName = '$fileName.md';
     }
+
     final path = '$directoryPath${Platform.pathSeparator}$fileName';
     final file = File(path);
 
     if (!await file.exists()) {
-      DateTime now = DateTime.now();
-      String twoDigits(int n) => n.toString().padLeft(2, '0');
-      String formatted =
-          "${now.year}-${twoDigits(now.month)}-${twoDigits(now.day)} "
-          "${twoDigits(now.hour)}:${twoDigits(now.minute)}:${twoDigits(now.second)}";
+      // Strip extension so the title field shows a clean name, not "note.md"
+      final cleanTitle = fileName
+          .replaceAll(RegExp(r'\.md$'), '')
+          .replaceAll(RegExp(r'\.txt$'), '');
 
-      // Makes sure standard newly created formats parse right on first lines natively
-      await file.writeAsString("$fileName\nCreated on $formatted");
+      // Write only the title on the first line — body starts empty.
+      // This prevents the "Created on …" line from appearing in the editor body.
+      await file.writeAsString(cleanTitle);
     }
+  }
+
+  /// Generates a unique file path so we never silently overwrite an existing note.
+  /// If "My Note.md" already exists it tries "My Note (2).md", "My Note (3).md", …
+  static Future<String> resolveUniqueFilePath(
+    String directoryPath,
+    String fileName,
+  ) async {
+    if (!fileName.endsWith('.md') && !fileName.endsWith('.txt')) {
+      fileName = '$fileName.md';
+    }
+
+    final ext = fileName.endsWith('.md') ? '.md' : '.txt';
+    final base = fileName.substring(0, fileName.length - ext.length);
+
+    String candidate = fileName;
+    int counter = 2;
+
+    while (await File(
+      '$directoryPath${Platform.pathSeparator}$candidate',
+    ).exists()) {
+      candidate = '$base ($counter)$ext';
+      counter++;
+    }
+
+    return '$directoryPath${Platform.pathSeparator}$candidate';
   }
 
   static Future<String> renameDirectory(String oldPath, String newName) async {

@@ -1,10 +1,45 @@
+import 'dart:io';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import '../obsidian_theme.dart';
 import '../mobile_editor_page.dart';
+import '../../../logic/vault_controller.dart';
 
-class MobileTagsView extends StatelessWidget {
+class MobileTagsView extends StatefulWidget {
   const MobileTagsView({super.key});
+
+  @override
+  State<MobileTagsView> createState() => _MobileTagsViewState();
+}
+
+class _MobileTagsViewState extends State<MobileTagsView> {
+  // tag -> list of file paths
+  Map<String, List<String>> _tagGroups = {};
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadTagGroups();
+    // Rebuild whenever vault changes (new notes saved, tags edited)
+    VaultController().addListener(_loadTagGroups);
+  }
+
+  @override
+  void dispose() {
+    VaultController().removeListener(_loadTagGroups);
+    super.dispose();
+  }
+
+  Future<void> _loadTagGroups() async {
+    final groups = await VaultController().getAllTagGroups();
+    if (mounted) {
+      setState(() {
+        _tagGroups = groups;
+        _isLoading = false;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -12,65 +47,13 @@ class MobileTagsView extends StatelessWidget {
       backgroundColor: Colors.transparent,
       appBar: _buildTopHeader(),
       body: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-          children: [
-            const SizedBox(height: 12),
-            // Sub Header Details mimicking Samsung logic structure
-            Center(
-              child: Text(
-                "Organized",
-                style: Obsidian.manrope.copyWith(
-                  color: Obsidian.text,
-                  fontSize: 32,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-            const SizedBox(height: 4),
-            Center(
-              child: Text(
-                "3 grouped spaces",
-                style: TextStyle(color: Obsidian.textDim, fontSize: 14),
-              ),
-            ),
-            const SizedBox(height: 32),
-
-            // Responsive App-like Grid for grouped Folders!
-            GridView.count(
-              shrinkWrap: true,
-              physics:
-                  const NeverScrollableScrollPhysics(), // Uses ListView scroll
-              crossAxisCount: 2,
-              mainAxisSpacing: 16,
-              crossAxisSpacing: 16,
-              childAspectRatio: 0.85,
-              children: [
-                _buildFolderBlock(
-                  context,
-                  title: "#design",
-                  contents: [
-                    "Philosophies",
-                    "Color Theory",
-                    "Tokens",
-                    "Layout Grids",
-                  ],
-                ),
-                _buildFolderBlock(
-                  context,
-                  title: "Ideas",
-                  contents: ["Groceries", "Gift Ideas", "Project Emerald"],
-                ),
-                _buildFolderBlock(
-                  context,
-                  title: "Meeting Notes",
-                  contents: ["Q4 Planning", "Dev sync"],
-                ),
-              ],
-            ),
-            const SizedBox(height: 100), // Buffer for navbar
-          ],
-        ),
+        child: _isLoading
+            ? const Center(
+                child: CircularProgressIndicator(color: Obsidian.emerald),
+              )
+            : _tagGroups.isEmpty
+            ? _buildEmptyState()
+            : _buildTagList(),
       ),
     );
   }
@@ -82,7 +65,7 @@ class MobileTagsView extends StatelessWidget {
       centerTitle: false,
       titleSpacing: 24,
       title: Text(
-        "SPACES",
+        'SPACES',
         style: Obsidian.manrope.copyWith(
           color: Obsidian.emerald,
           fontWeight: FontWeight.w800,
@@ -93,14 +76,279 @@ class MobileTagsView extends StatelessWidget {
     );
   }
 
-  // Looks exactly like iOS / Android grouping Folders but sized and styled to match Notes!
-  Widget _buildFolderBlock(
-    BuildContext context, {
-    required String title,
-    required List<String> contents,
-  }) {
+  Widget _buildTagList() {
+    final tags = _tagGroups.keys.toList();
+    final totalNotes = _tagGroups.values
+        .map((v) => v.length)
+        .fold(0, (a, b) => a + b);
+
+    return ListView(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+      children: [
+        const SizedBox(height: 12),
+        Center(
+          child: Text(
+            'Organized',
+            style: Obsidian.manrope.copyWith(
+              color: Obsidian.text,
+              fontSize: 32,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ),
+        const SizedBox(height: 4),
+        Center(
+          child: Text(
+            '${tags.length} tag${tags.length == 1 ? '' : 's'} · $totalNotes note${totalNotes == 1 ? '' : 's'}',
+            style: const TextStyle(color: Obsidian.textDim, fontSize: 14),
+          ),
+        ),
+        const SizedBox(height: 32),
+
+        GridView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: tags.length,
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 2,
+            mainAxisSpacing: 16,
+            crossAxisSpacing: 16,
+            childAspectRatio: 0.85,
+          ),
+          itemBuilder: (context, index) {
+            final tag = tags[index];
+            final paths = _tagGroups[tag]!;
+            return _TagGroupCard(
+              tag: tag,
+              filePaths: paths,
+              onTap: () => _showTagNotesSheet(tag, paths),
+            );
+          },
+        ),
+
+        const SizedBox(height: 100),
+      ],
+    );
+  }
+
+  Widget _buildEmptyState() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.sell_outlined,
+              color: Obsidian.emerald.withOpacity(0.4),
+              size: 64,
+            ),
+            const SizedBox(height: 24),
+            Text(
+              'No Tags Yet',
+              style: Obsidian.manrope.copyWith(
+                color: Obsidian.text,
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 12),
+            const Text(
+              'Open a note, tap the menu button, and add tags to start organising your archive into spaces.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: Obsidian.textDim,
+                height: 1.5,
+                fontSize: 14,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showTagNotesSheet(String tag, List<String> paths) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (ctx) {
+        return DraggableScrollableSheet(
+          initialChildSize: 0.55,
+          minChildSize: 0.35,
+          maxChildSize: 0.92,
+          expand: false,
+          builder: (_, scrollController) {
+            return ClipRRect(
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(24),
+              ),
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+                child: Container(
+                  color: Obsidian.surfaceLow.withOpacity(0.97),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Drag handle
+                      Center(
+                        child: Container(
+                          margin: const EdgeInsets.only(top: 12, bottom: 20),
+                          width: 40,
+                          height: 4,
+                          decoration: BoxDecoration(
+                            color: Obsidian.textDim.withOpacity(0.3),
+                            borderRadius: BorderRadius.circular(2),
+                          ),
+                        ),
+                      ),
+
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 6,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Obsidian.emeraldDim.withOpacity(0.4),
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(
+                                  color: Obsidian.emerald.withOpacity(0.3),
+                                ),
+                              ),
+                              child: Text(
+                                '#$tag',
+                                style: Obsidian.manrope.copyWith(
+                                  color: Obsidian.emeraldLight,
+                                  fontWeight: FontWeight.w800,
+                                  fontSize: 16,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Text(
+                              '${paths.length} note${paths.length == 1 ? '' : 's'}',
+                              style: const TextStyle(
+                                color: Obsidian.textDim,
+                                fontSize: 14,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+
+                      Expanded(
+                        child: ListView.builder(
+                          controller: scrollController,
+                          padding: const EdgeInsets.symmetric(horizontal: 20),
+                          itemCount: paths.length,
+                          itemBuilder: (context, i) {
+                            final path = paths[i];
+                            final vault = VaultController();
+                            final title = vault.titleFromPath(path);
+                            final file = vault.files.firstWhere(
+                              (f) => f.path == path,
+                              orElse: () => File(path),
+                            );
+
+                            return GestureDetector(
+                              onTap: () {
+                                Navigator.pop(ctx);
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) =>
+                                        MobileEditorPage(file: file),
+                                  ),
+                                );
+                              },
+                              child: Container(
+                                width: double.infinity,
+                                margin: const EdgeInsets.only(bottom: 10),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 18,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: Obsidian.surfaceHighest,
+                                  borderRadius: BorderRadius.circular(14),
+                                ),
+                                child: Row(
+                                  children: [
+                                    const Icon(
+                                      Icons.description_outlined,
+                                      color: Obsidian.textDim,
+                                      size: 18,
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: Text(
+                                        title,
+                                        style: Obsidian.manrope.copyWith(
+                                          color: Obsidian.text,
+                                          fontWeight: FontWeight.w600,
+                                          fontSize: 15,
+                                        ),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                    const Icon(
+                                      Icons.chevron_right,
+                                      color: Obsidian.textDim,
+                                      size: 18,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+}
+
+// =============================================================================
+// Tag group card shown in the 2-column grid
+// =============================================================================
+
+class _TagGroupCard extends StatelessWidget {
+  final String tag;
+  final List<String> filePaths;
+  final VoidCallback onTap;
+
+  const _TagGroupCard({
+    required this.tag,
+    required this.filePaths,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final vault = VaultController();
+    // Show up to 4 note titles as preview tiles inside the card
+    final previewTitles = filePaths
+        .take(4)
+        .map((p) => vault.titleFromPath(p))
+        .toList();
+
     return GestureDetector(
-      onTap: () => _showFolderContentsDialog(context, title, contents),
+      onTap: onTap,
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
@@ -110,25 +358,49 @@ class MobileTagsView extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              title,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: Obsidian.manrope.copyWith(
-                color: Obsidian.text,
-                fontWeight: FontWeight.bold,
-                fontSize: 16,
-              ),
+            // Tag label
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    '#$tag',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Obsidian.manrope.copyWith(
+                      color: Obsidian.emeraldLight,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 15,
+                    ),
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 7,
+                    vertical: 2,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Obsidian.emeraldDim.withOpacity(0.35),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    '${filePaths.length}',
+                    style: Obsidian.inter.copyWith(
+                      color: Obsidian.emerald,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 14),
+
+            // Mini note preview grid
             Expanded(
-              // Draw the inner tiny grid
               child: GridView.builder(
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
-                itemCount: contents.length > 4
-                    ? 4
-                    : contents.length, // Preview max 4 tiny blocks
+                itemCount: previewTitles.length,
                 gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                   crossAxisCount: 2,
                   crossAxisSpacing: 8,
@@ -137,14 +409,18 @@ class MobileTagsView extends StatelessWidget {
                 itemBuilder: (context, idx) {
                   return Container(
                     decoration: BoxDecoration(
-                      color: Obsidian.surfaceHighest, // Nested elevation color
+                      color: Obsidian.surfaceHighest,
                       borderRadius: BorderRadius.circular(8),
                     ),
                     padding: const EdgeInsets.all(6),
                     child: Text(
-                      contents[idx],
-                      style: TextStyle(color: Obsidian.textDim, fontSize: 8),
+                      previewTitles[idx],
+                      style: const TextStyle(
+                        color: Obsidian.textDim,
+                        fontSize: 8,
+                      ),
                       overflow: TextOverflow.fade,
+                      maxLines: 3,
                     ),
                   );
                 },
@@ -153,95 +429,6 @@ class MobileTagsView extends StatelessWidget {
           ],
         ),
       ),
-    );
-  }
-
-  // Opening the group expands a nice glassy BottomSheet previewing the items.
-  void _showFolderContentsDialog(
-    BuildContext context,
-    String folderTitle,
-    List<String> notesList,
-  ) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      builder: (ctx) {
-        return ClipRRect(
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-            child: Container(
-              color: Obsidian.surfaceLow.withOpacity(
-                0.95,
-              ), // Ghost shell base layer
-              padding: const EdgeInsets.fromLTRB(20, 10, 20, 20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize:
-                    MainAxisSize.min, // shrinkwraps dynamic data sizes natively
-                children: [
-                  Center(
-                    child: Container(
-                      width: 40,
-                      height: 4,
-                      decoration: BoxDecoration(
-                        color: Obsidian.textDim.withOpacity(0.3),
-                        borderRadius: BorderRadius.circular(2),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-
-                  Text(
-                    "Folder: $folderTitle",
-                    style: Obsidian.manrope.copyWith(
-                      color: Obsidian.text,
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-
-                  // Shows exact files to click
-                  ...notesList.map(
-                    (noteLabel) => GestureDetector(
-                      onTap: () {
-                        Navigator.pop(ctx);
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const MobileEditorPage(),
-                          ),
-                        );
-                      },
-                      child: Container(
-                        width: double.infinity,
-                        margin: const EdgeInsets.only(bottom: 8),
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 16,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Obsidian.surfaceHighest,
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Text(
-                          noteLabel,
-                          style: TextStyle(
-                            color: Obsidian.text,
-                            fontWeight: FontWeight.w600,
-                            fontSize: 16,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        );
-      },
     );
   }
 }
