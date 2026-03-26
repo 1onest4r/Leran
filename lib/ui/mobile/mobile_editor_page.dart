@@ -196,16 +196,13 @@ class _MobileEditorPageState extends State<MobileEditorPage> {
       builder: (dialogCtx) => AlertDialog(
         backgroundColor: Obsidian.surfaceHigh,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text(
-          'Custom Font Size',
-          style: TextStyle(color: Obsidian.text),
-        ),
+        title: Text('Custom Font Size', style: TextStyle(color: Obsidian.text)),
         content: TextField(
           controller: sizeController,
           keyboardType: TextInputType.number,
-          style: const TextStyle(color: Obsidian.text),
+          style: TextStyle(color: Obsidian.text),
           cursorColor: Obsidian.emerald,
-          decoration: const InputDecoration(
+          decoration: InputDecoration(
             hintText: 'Enter number (e.g. 18)',
             hintStyle: TextStyle(color: Obsidian.textDim),
             focusedBorder: UnderlineInputBorder(
@@ -216,10 +213,7 @@ class _MobileEditorPageState extends State<MobileEditorPage> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogCtx),
-            child: const Text(
-              'Cancel',
-              style: TextStyle(color: Obsidian.textDim),
-            ),
+            child: Text('Cancel', style: TextStyle(color: Obsidian.textDim)),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
@@ -237,7 +231,7 @@ class _MobileEditorPageState extends State<MobileEditorPage> {
               Navigator.pop(dialogCtx);
               Navigator.pop(sheetContext);
             },
-            child: const Text(
+            child: Text(
               'Apply',
               style: TextStyle(
                 color: Obsidian.background,
@@ -263,21 +257,18 @@ class _MobileEditorPageState extends State<MobileEditorPage> {
       builder: (dialogCtx) => AlertDialog(
         backgroundColor: Obsidian.surfaceHighest,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text(
+        title: Text(
           'Delete Note?',
           style: TextStyle(color: Obsidian.text, fontWeight: FontWeight.bold),
         ),
-        content: const Text(
+        content: Text(
           'This fragment will be removed from your localized vault. This cannot be undone.',
           style: TextStyle(color: Obsidian.textDim, height: 1.5),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogCtx),
-            child: const Text(
-              'Cancel',
-              style: TextStyle(color: Obsidian.textDim),
-            ),
+            child: Text('Cancel', style: TextStyle(color: Obsidian.textDim)),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
@@ -295,7 +286,7 @@ class _MobileEditorPageState extends State<MobileEditorPage> {
                 _handleSaveAndExit();
               }
             },
-            child: const Text(
+            child: Text(
               'Delete',
               style: TextStyle(
                 color: Obsidian.danger,
@@ -322,7 +313,7 @@ class _MobileEditorPageState extends State<MobileEditorPage> {
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
-      return const Scaffold(
+      return Scaffold(
         backgroundColor: Obsidian.background,
         body: Center(child: CircularProgressIndicator(color: Obsidian.emerald)),
       );
@@ -339,7 +330,7 @@ class _MobileEditorPageState extends State<MobileEditorPage> {
           backgroundColor: Obsidian.background,
           elevation: 0,
           leading: IconButton(
-            icon: const Icon(Icons.arrow_back, color: Obsidian.text),
+            icon: Icon(Icons.arrow_back, color: Obsidian.text),
             onPressed: _handleSaveAndExit,
           ),
           actions: [
@@ -365,7 +356,7 @@ class _MobileEditorPageState extends State<MobileEditorPage> {
                 const SizedBox(height: 8),
                 Text(
                   widget.file == null ? 'NEW RECORD' : 'WORKSPACE',
-                  style: const TextStyle(
+                  style: TextStyle(
                     color: Obsidian.textDim,
                     fontSize: 11,
                     letterSpacing: 1.2,
@@ -496,7 +487,7 @@ class _MobileEditorPageState extends State<MobileEditorPage> {
             elevation: 4,
             shape: const CircleBorder(),
             onPressed: _showOptionsMenu,
-            child: const Icon(Icons.menu, color: Obsidian.text),
+            child: Icon(Icons.menu, color: Obsidian.text),
           ),
         ),
       ),
@@ -662,7 +653,7 @@ class _OptionsSheetState extends State<_OptionsSheet> {
                           gradient: Obsidian.gemstoneGradient,
                           borderRadius: BorderRadius.circular(12),
                         ),
-                        child: const Icon(
+                        child: Icon(
                           Icons.add,
                           color: Obsidian.emeraldDim,
                           size: 22,
@@ -719,7 +710,7 @@ class _OptionsSheetState extends State<_OptionsSheet> {
                     onPressed: widget.onCustomSize,
                     style: OutlinedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 14),
-                      side: const BorderSide(color: Obsidian.surfaceLow),
+                      side: BorderSide(color: Obsidian.surfaceLow),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
@@ -743,12 +734,12 @@ class _OptionsSheetState extends State<_OptionsSheet> {
                   width: double.infinity,
                   child: ElevatedButton.icon(
                     onPressed: widget.onDelete,
-                    icon: const Icon(
+                    icon: Icon(
                       Icons.delete_outline,
                       color: Obsidian.danger,
                       size: 20,
                     ),
-                    label: const Text(
+                    label: Text(
                       'Destroy Record',
                       style: TextStyle(
                         color: Obsidian.danger,
@@ -853,11 +844,7 @@ class _TagChip extends StatelessWidget {
           const SizedBox(width: 4),
           GestureDetector(
             onTap: onRemove,
-            child: const Icon(
-              Icons.close,
-              size: 14,
-              color: Obsidian.emeraldLight,
-            ),
+            child: Icon(Icons.close, size: 14, color: Obsidian.emeraldLight),
           ),
         ],
       ),

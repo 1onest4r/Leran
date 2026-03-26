@@ -54,7 +54,7 @@ class MyApp extends StatelessWidget {
                 : Brightness.light,
           ),
           // Route straight to our responsive router
-          home: const ResponsiveLayout(),
+          home: ResponsiveLayout(),
         );
       },
     );

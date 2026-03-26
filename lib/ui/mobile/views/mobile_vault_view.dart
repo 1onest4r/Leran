@@ -78,7 +78,7 @@ class MobileVaultView extends StatelessWidget {
                           ),
                         ],
                       ),
-                      child: const Icon(
+                      child: Icon(
                         Icons.edit_document,
                         color: Obsidian.emeraldDim,
                         size: 28,
@@ -116,11 +116,7 @@ class MobileVaultView extends StatelessWidget {
             shape: BoxShape.circle,
             border: Border.all(color: Obsidian.textDim.withOpacity(0.2)),
           ),
-          child: const Icon(
-            Icons.diamond_outlined,
-            color: Obsidian.text,
-            size: 20,
-          ),
+          child: Icon(Icons.diamond_outlined, color: Obsidian.text, size: 20),
         ),
       ],
     );
@@ -207,7 +203,7 @@ class MobileVaultView extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 12),
-            const Text(
+            Text(
               'Select a folder on your device to serve as your digital archive. Your notes will be stored safely here.',
               textAlign: TextAlign.center,
               style: TextStyle(color: Obsidian.textDim, height: 1.5),
@@ -221,7 +217,7 @@ class MobileVaultView extends StatelessWidget {
               ),
               style: OutlinedButton.styleFrom(
                 foregroundColor: Obsidian.emerald,
-                side: const BorderSide(color: Obsidian.emerald, width: 2),
+                side: BorderSide(color: Obsidian.emerald, width: 2),
                 padding: const EdgeInsets.all(16),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(16),
@@ -312,7 +308,7 @@ class DynamicNoteCard extends StatelessWidget {
                   ),
                 ),
                 if (isPinned)
-                  const Icon(Icons.push_pin, color: Obsidian.emerald, size: 14),
+                  Icon(Icons.push_pin, color: Obsidian.emerald, size: 14),
               ],
             ),
             const SizedBox(height: 12),

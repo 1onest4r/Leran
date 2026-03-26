@@ -11,10 +11,10 @@ class ResponsiveLayout extends StatelessWidget {
       builder: (context, constraints) {
         // Typically mobile constraints max width is less than 600px.
         if (constraints.maxWidth < 600) {
-          return const MobileHomePage();
+          return MobileHomePage();
         } else {
           // Fall back to your desktop workspace
-          return const DesktopHomePage();
+          return DesktopHomePage();
         }
       },
     );

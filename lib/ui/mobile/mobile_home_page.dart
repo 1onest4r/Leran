@@ -16,7 +16,7 @@ class MobileHomePage extends StatefulWidget {
 class _MobileHomePageState extends State<MobileHomePage> {
   int _currentIndex = 0;
 
-  final List<Widget> _pages = const [
+  List<Widget> get _pages => [
     MobileVaultView(),
     MobileSearchView(),
     MobileTagsView(), // <--- ASSIGNED FOLDERS TAB HERE

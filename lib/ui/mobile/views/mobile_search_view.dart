@@ -160,7 +160,7 @@ class _MobileSearchViewState extends State<MobileSearchView> {
           ),
           suffixIcon: _query.isNotEmpty
               ? IconButton(
-                  icon: const Icon(Icons.close, color: Obsidian.textDim),
+                  icon: Icon(Icons.close, color: Obsidian.textDim),
                   onPressed: () {
                     _searchController.clear();
                     _performSearch("");
@@ -169,7 +169,7 @@ class _MobileSearchViewState extends State<MobileSearchView> {
                 )
               : null,
           hintText: "Search titles or content...",
-          hintStyle: const TextStyle(color: Obsidian.textDim),
+          hintStyle: TextStyle(color: Obsidian.textDim),
           border: InputBorder.none,
           contentPadding: const EdgeInsets.symmetric(vertical: 16),
         ),
@@ -220,7 +220,7 @@ class _MobileSearchViewState extends State<MobileSearchView> {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.sell_outlined, size: 14, color: Obsidian.emerald),
+            Icon(Icons.sell_outlined, size: 14, color: Obsidian.emerald),
             const SizedBox(width: 8),
             Text(
               tag,
@@ -271,16 +271,12 @@ class _MobileSearchViewState extends State<MobileSearchView> {
         ..._recentQueries.map(
           (q) => ListTile(
             contentPadding: EdgeInsets.zero,
-            leading: const Icon(
-              Icons.history,
-              color: Obsidian.textDim,
-              size: 20,
-            ),
+            leading: Icon(Icons.history, color: Obsidian.textDim, size: 20),
             title: Text(
               q,
               style: Obsidian.inter.copyWith(color: Obsidian.text),
             ),
-            trailing: const Icon(
+            trailing: Icon(
               Icons.arrow_outward,
               color: Obsidian.textDim,
               size: 16,
@@ -297,7 +293,7 @@ class _MobileSearchViewState extends State<MobileSearchView> {
 
   Widget _buildResultsList() {
     if (_isSearching) {
-      return const Padding(
+      return Padding(
         padding: EdgeInsets.only(top: 40),
         child: Center(
           child: CircularProgressIndicator(color: Obsidian.emerald),

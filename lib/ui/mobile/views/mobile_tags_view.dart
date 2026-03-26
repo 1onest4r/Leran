@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import '../obsidian_theme.dart';
 import '../mobile_editor_page.dart';
 import '../../../logic/vault_controller.dart';
+import '../../../services/settings_service.dart';
 
 class MobileTagsView extends StatefulWidget {
   const MobileTagsView({super.key});
@@ -43,18 +44,23 @@ class _MobileTagsViewState extends State<MobileTagsView> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.transparent,
-      appBar: _buildTopHeader(),
-      body: SafeArea(
-        child: _isLoading
-            ? const Center(
-                child: CircularProgressIndicator(color: Obsidian.emerald),
-              )
-            : _tagGroups.isEmpty
-            ? _buildEmptyState()
-            : _buildTagList(),
-      ),
+    return AnimatedBuilder(
+      animation: SettingsService(),
+      builder: (context, child) {
+        return Scaffold(
+          backgroundColor: Colors.transparent,
+          appBar: _buildTopHeader(),
+          body: SafeArea(
+            child: _isLoading
+                ? Center(
+                    child: CircularProgressIndicator(color: Obsidian.emerald),
+                  )
+                : _tagGroups.isEmpty
+                ? _buildEmptyState()
+                : _buildTagList(),
+          ),
+        );
+      },
     );
   }
 
@@ -100,7 +106,7 @@ class _MobileTagsViewState extends State<MobileTagsView> {
         Center(
           child: Text(
             '${tags.length} tag${tags.length == 1 ? '' : 's'} · $totalNotes note${totalNotes == 1 ? '' : 's'}',
-            style: const TextStyle(color: Obsidian.textDim, fontSize: 14),
+            style: TextStyle(color: Obsidian.textDim, fontSize: 14),
           ),
         ),
         const SizedBox(height: 32),
@@ -153,7 +159,7 @@ class _MobileTagsViewState extends State<MobileTagsView> {
               ),
             ),
             const SizedBox(height: 12),
-            const Text(
+            Text(
               'Open a note, tap the menu button, and add tags to start organising your archive into spaces.',
               textAlign: TextAlign.center,
               style: TextStyle(
@@ -232,7 +238,7 @@ class _MobileTagsViewState extends State<MobileTagsView> {
                             const SizedBox(width: 12),
                             Text(
                               '${paths.length} note${paths.length == 1 ? '' : 's'}',
-                              style: const TextStyle(
+                              style: TextStyle(
                                 color: Obsidian.textDim,
                                 fontSize: 14,
                               ),
@@ -280,7 +286,7 @@ class _MobileTagsViewState extends State<MobileTagsView> {
                                 ),
                                 child: Row(
                                   children: [
-                                    const Icon(
+                                    Icon(
                                       Icons.description_outlined,
                                       color: Obsidian.textDim,
                                       size: 18,
@@ -298,7 +304,7 @@ class _MobileTagsViewState extends State<MobileTagsView> {
                                         overflow: TextOverflow.ellipsis,
                                       ),
                                     ),
-                                    const Icon(
+                                    Icon(
                                       Icons.chevron_right,
                                       color: Obsidian.textDim,
                                       size: 18,
@@ -415,10 +421,7 @@ class _TagGroupCard extends StatelessWidget {
                     padding: const EdgeInsets.all(6),
                     child: Text(
                       previewTitles[idx],
-                      style: const TextStyle(
-                        color: Obsidian.textDim,
-                        fontSize: 8,
-                      ),
+                      style: TextStyle(color: Obsidian.textDim, fontSize: 8),
                       overflow: TextOverflow.fade,
                       maxLines: 3,
                     ),
