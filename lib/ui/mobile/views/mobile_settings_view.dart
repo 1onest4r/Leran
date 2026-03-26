@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../obsidian_theme.dart';
 import '../../../services/settings_service.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class MobileSettingsView extends StatelessWidget {
   const MobileSettingsView({super.key});
@@ -263,8 +264,28 @@ class MobileSettingsView extends StatelessWidget {
                   borderRadius: BorderRadius.circular(8),
                 ),
               ),
-              onPressed: () {
-                if (controller.text.isNotEmpty) Navigator.pop(context);
+              onPressed: () async {
+                final feedbackText = controller.text.trim();
+                if (feedbackText.isNotEmpty) {
+                  // 1. Construct the mailto URI
+                  final Uri emailUri = Uri(
+                    scheme: 'mailto',
+                    path:
+                        '1onest4r.granpad@gmail.com', // ⚠️ REPLACE WITH YOUR EMAIL
+                    query:
+                        'subject=Obsidian%20App%20Feedback&body=${Uri.encodeComponent(feedbackText)}',
+                  );
+
+                  // 2. Launch the email client
+                  try {
+                    await launchUrl(emailUri);
+                  } catch (e) {
+                    debugPrint("Could not launch email client");
+                  }
+
+                  // 3. Close the dialog
+                  if (context.mounted) Navigator.pop(context);
+                }
               },
               child: Text(
                 "Send",
