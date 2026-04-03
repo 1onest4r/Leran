@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:io';
 
 import '../pages/cluster_page.dart';
 import '../pages/home_page.dart';
@@ -30,7 +31,7 @@ class _LayoutManagerState extends State<LayoutManager> {
     return LayoutBuilder(
       builder: (context, constraints) {
         //breakpoint 600px
-        if (constraints.maxWidth < 600) {
+        if (Platform.isAndroid || Platform.isIOS) {
           return _buildMobileLayout();
         } else {
           return _buildDesktopLayout();
@@ -42,7 +43,10 @@ class _LayoutManagerState extends State<LayoutManager> {
   //mobile layout
   Widget _buildMobileLayout() {
     return Scaffold(
-      body: _pages[_currentIndex],
+      body: ConstrainedBox(
+        constraints: const BoxConstraints(minWidth: 320, minHeight: 480),
+        child: _pages[_currentIndex],
+      ),
       bottomNavigationBar: Container(
         height: 80,
         color: AppTheme.neutral,
@@ -63,28 +67,33 @@ class _LayoutManagerState extends State<LayoutManager> {
   //desktop layout
   Widget _buildDesktopLayout() {
     return Scaffold(
-      body: Row(
-        children: [
-          // Sidebar
-          Container(
-            width: 80,
-            color: const Color(0xFF1A1A1A), // Slightly lighter than background
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                _navIcon(Icons.description_outlined, 0),
-                const SizedBox(height: 20),
-                _navIcon(Icons.search, 1),
-                const SizedBox(height: 20),
-                _navIcon(Icons.folder_outlined, 2),
-                const SizedBox(height: 20),
-                _navIcon(Icons.settings_outlined, 3),
-              ],
+      body: ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: 600, minWidth: 800),
+        child: Row(
+          children: [
+            // Sidebar
+            Container(
+              width: 80,
+              color: const Color(
+                0xFF1A1A1A,
+              ), // Slightly lighter than background
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  _navIcon(Icons.description_outlined, 0),
+                  const SizedBox(height: 20),
+                  _navIcon(Icons.search, 1),
+                  const SizedBox(height: 20),
+                  _navIcon(Icons.folder_outlined, 2),
+                  const SizedBox(height: 20),
+                  _navIcon(Icons.settings_outlined, 3),
+                ],
+              ),
             ),
-          ),
-          // Main Content Area
-          Expanded(child: _pages[_currentIndex]),
-        ],
+            // Main Content Area
+            Expanded(child: _pages[_currentIndex]),
+          ],
+        ),
       ),
     );
   }
