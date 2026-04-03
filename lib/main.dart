@@ -17,8 +17,8 @@ void main() async {
     WindowOptions windowOptions = const WindowOptions(
       size: Size(1000, 750), // The default size when the app opens
       minimumSize: Size(
-        800,
-        600,
+        360,
+        480,
       ), // THE HARD LOCK: User cannot shrink smaller than this
       center: true, // Opens the app in the middle of the screen
       backgroundColor: Colors.transparent,
@@ -48,7 +48,7 @@ class LeranApp extends StatelessWidget {
 
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
-      themeMode: ThemeMode.system,
+      themeMode: ThemeMode.dark,
 
       home: const LayoutManager(),
     );

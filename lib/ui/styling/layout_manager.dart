@@ -68,7 +68,7 @@ class _LayoutManagerState extends State<LayoutManager> {
   Widget _buildDesktopLayout() {
     return Scaffold(
       body: ConstrainedBox(
-        constraints: const BoxConstraints(minHeight: 600, minWidth: 800),
+        constraints: const BoxConstraints(minHeight: 360, minWidth: 480),
         child: Row(
           children: [
             // Sidebar
