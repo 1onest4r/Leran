@@ -51,6 +51,7 @@ class SettingsPage extends StatelessWidget {
               activeColor: const Color(0xFF33B996),
               onChanged: (v) {},
             ),
+            const Divider(color: Color.fromARGB(255, 71, 71, 71), height: 1),
             const ListTile(
               leading: Icon(Icons.palette_outlined),
               title: Text("Theme Primary"),
@@ -68,7 +69,7 @@ class SettingsPage extends StatelessWidget {
               title: Text("Send Feedback"),
               subtitle: Text("Report a bug or suggest a new feature"),
             ),
-            const Divider(color: Colors.grey, height: 1),
+            const Divider(color: Color.fromARGB(255, 71, 71, 71), height: 1),
             const ListTile(
               leading: Icon(Icons.info_outline),
               title: Text("About"),

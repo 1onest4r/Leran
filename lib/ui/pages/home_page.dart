@@ -17,12 +17,6 @@ class HomePage extends StatelessWidget {
             letterSpacing: 1.2,
           ),
         ),
-        actions: [
-          IconButton(
-            onPressed: () {},
-            icon: const Icon(Icons.diamond_outlined, color: Colors.grey),
-          ),
-        ],
       ),
       body: Center(
         child: Column(

@@ -23,7 +23,7 @@ void main() async {
       center: true, // Opens the app in the middle of the screen
       backgroundColor: Colors.transparent,
       skipTaskbar: false,
-      title: "Leran", // Your App Name
+      title: "leran", // Your App Name
     );
 
     // 3. Wait until the window is ready, then show it
