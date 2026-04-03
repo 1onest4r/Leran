@@ -15,10 +15,10 @@ void main() async {
     await windowManager.ensureInitialized();
 
     WindowOptions windowOptions = const WindowOptions(
-      size: Size(1000, 750), // The default size when the app opens
+      size: Size(1280, 720), // The default size when the app opens
       minimumSize: Size(
         360,
-        480,
+        500,
       ), // THE HARD LOCK: User cannot shrink smaller than this
       center: true, // Opens the app in the middle of the screen
       backgroundColor: Colors.transparent,
