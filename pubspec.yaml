@@ -14,6 +14,10 @@ dependencies:
   cupertino_icons: ^1.0.8
   google_fonts: ^8.0.2
   window_manager: ^0.3.7
+  #for folder permission
+  file_picker: ^10.3.10
+  #for remembering permission
+  shared_preferences: ^2.5.5
 
 dev_dependencies:
   flutter_test:
