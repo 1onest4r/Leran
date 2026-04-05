@@ -6,6 +6,10 @@ isar
 
 flutter pub run build_runner build (missing database code generator)
 
+- [ ] add keyboard keys for shortcut hold alt for showing the shortcut keys specifically for desktop version
+- [ ] add option for loading some chunks of the whole file for both home page and search
+- [ ] split the note logic from folder_logic and integrate tags as ~tag name~ so the name must be between ~~ marks
+- [ ] add option for search by title, content, tag (multiple categories can be selected but order is tag, title, content)
 - [ ] make the clusters page working with proper clustering logic
 - [ ] make the settings page working
   - [ ] make syncing page with folder picker to give user ability to sync partial data
@@ -14,6 +18,8 @@ flutter pub run build_runner build (missing database code generator)
 - [ ] make feedback working in the settings page
 - [ ] make theme toggle/changer working
 - [ ] update the android release to 2.0.0+6, publish on linux and windows
+
+- [ ] enable [[file name]] for linking the files and figure how how to easily index it for graphing
 
 ## How Leran the app works
 
