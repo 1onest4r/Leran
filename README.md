@@ -6,7 +6,6 @@ isar
 
 flutter pub run build_runner build (missing database code generator)
 
-- [ ] make the interaction in home_page.dart working
 - [ ] make the search_page.dart working (test the db indexing speed)
 - [ ] make the clusters page working with proper clustering logic
 - [ ] make the settings page working

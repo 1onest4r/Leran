@@ -9,6 +9,7 @@ import '../data/models/note.dart';
 class FolderLogic extends ChangeNotifier {
   String? folderPath;
   bool isLoading = true;
+  String loadingStatus = "Loading...";
 
   final IsarService dbService = IsarService();
   List<Note> allNotes = [];
@@ -51,10 +52,64 @@ class FolderLogic extends ChangeNotifier {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('folder_path', selectedDirectory);
       folderPath = selectedDirectory;
+      await _syncFolderMassive(selectedDirectory);
       await refreshNotesList(); //load empty list
       //tells the ui th folder is picked
       notifyListeners();
     }
+  }
+
+  Future<void> _syncFolderMassive(String path) async {
+    isLoading = true;
+    loadingStatus = "Scanning directory...";
+    notifyListeners();
+
+    try {
+      await dbService.clearAllNotes(); // Reset DB for the new folder
+
+      final directory = Directory(path);
+      // Change recursive to true if you have subfolders inside your main folder
+      final entities = await directory.list(recursive: true).toList();
+      final mdFiles = entities
+          .whereType<File>()
+          .where((f) => f.path.endsWith('.md'))
+          .toList();
+
+      final int batchSize = 200; // Processes 200 files at a time to save RAM
+      for (int i = 0; i < mdFiles.length; i += batchSize) {
+        loadingStatus =
+            "Syncing files ${i} to ${i + batchSize < mdFiles.length ? i + batchSize : mdFiles.length} of ${mdFiles.length}...";
+        notifyListeners();
+
+        final end = (i + batchSize < mdFiles.length)
+            ? i + batchSize
+            : mdFiles.length;
+        final batch = mdFiles.sublist(i, end);
+        List<Note> notesBatch = [];
+
+        for (var file in batch) {
+          final stat = await file.stat();
+          final content = await file.readAsString();
+          // Extract file name without extension safely
+          final title = file.uri.pathSegments.last.replaceAll('.md', '');
+
+          notesBatch.add(
+            Note()
+              ..title = title
+              ..content = content
+              ..filePath = file.path
+              ..updateAt = stat.modified,
+          );
+        }
+
+        await dbService.saveNotesBatch(notesBatch);
+      }
+    } catch (e) {
+      print("Mass sync error: $e");
+    }
+
+    isLoading = false;
+    notifyListeners();
   }
 
   //diconnect the active folder
@@ -62,6 +117,8 @@ class FolderLogic extends ChangeNotifier {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('folder_path');
     folderPath = null;
+    await dbService.clearAllNotes();
+    allNotes.clear();
     notifyListeners();
   }
 

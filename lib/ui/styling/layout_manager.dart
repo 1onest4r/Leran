@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:leran/logic/folder_logic.dart';
 import 'dart:io';
 
 import '../pages/cluster_page.dart';
@@ -18,16 +19,23 @@ class LayoutManager extends StatefulWidget {
 class _LayoutManagerState extends State<LayoutManager> {
   int _currentIndex = 0;
 
-  // This list maps your icons to the actual pages
-  final List<Widget> _pages = [
-    const HomePage(),
-    const SearchPage(),
-    const ClusterPage(),
-    const SettingsPage(),
-  ];
+  final FolderLogic _folderLogic = FolderLogic();
+
+  @override
+  void dispose() {
+    _folderLogic.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
+    final List<Widget> pages = [
+      HomePage(folderLogic: _folderLogic),
+      SearchPage(folderLogic: _folderLogic),
+      const ClusterPage(),
+      SettingsPage(folderLogic: _folderLogic),
+    ];
+
     return LayoutBuilder(
       builder: (context, constraints) {
         //breakpoint 600px
@@ -35,13 +43,13 @@ class _LayoutManagerState extends State<LayoutManager> {
           return MobileLayout(
             currentIndex: _currentIndex,
             onIndexChanged: (index) => setState(() => _currentIndex = index),
-            pages: _pages,
+            pages: pages,
           );
         } else {
           return DesktopLayout(
             currentIndex: _currentIndex,
             onIndexChanged: (index) => setState(() => _currentIndex = index),
-            pages: _pages,
+            pages: pages,
           );
         }
       },

@@ -18,5 +18,6 @@ class Note {
   @Index(type: IndexType.hash)
   String filePath = '';
 
+  @Index()
   DateTime updateAt = DateTime.now();
 }

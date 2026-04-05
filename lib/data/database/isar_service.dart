@@ -33,12 +33,6 @@ class IsarService {
     });
   }
 
-  //fetch all notes to show on the home page
-  Future<List<Note>> getAllNotes() async {
-    final isar = await db;
-    return await isar.notes.where().sortByTitle().findAll();
-  }
-
   //supa mega fast search (check title or content)
   Future<List<Note>> searchNotes(String query) async {
     final isar = await db;
@@ -47,6 +41,34 @@ class IsarService {
         .titleContains(query, caseSensitive: false)
         .or()
         .contentContains(query, caseSensitive: false)
+        .sortByTitle()
+        .limit(100)
         .findAll();
+  }
+
+  Future<void> saveNotesBatch(List<Note> notes) async {
+    final isar = await db;
+    await isar.writeTxn(() async {
+      await isar.notes.putAll(notes);
+    });
+  }
+
+  Future<void> clearAllNotes() async {
+    final isar = await db;
+    await isar.writeTxn(() async {
+      await isar.notes.clear();
+    });
+  }
+
+  //fetch all notes to show on the home page (limiting at 500)
+  Future<List<Note>> getAllNotes() async {
+    final isar = await db;
+    return await isar.notes.where().sortByTitle().limit(500).findAll();
+  }
+
+  //fetch recently modified notes for the default search page view
+  Future<List<Note>> getRecentNotes({int limit = 30}) async {
+    final isar = await db;
+    return await isar.notes.where().sortByUpdateAtDesc().limit(limit).findAll();
   }
 }

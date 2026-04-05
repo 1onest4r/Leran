@@ -3,21 +3,11 @@ import 'package:flutter/material.dart';
 import '../../logic/folder_logic.dart';
 import 'note_editor_page.dart';
 
-class HomePage extends StatefulWidget {
-  const HomePage({super.key});
+class HomePage extends StatelessWidget {
+  final FolderLogic folderLogic;
 
-  @override
-  State<HomePage> createState() => _HomePageState();
-}
-
-class _HomePageState extends State<HomePage> {
-  final FolderLogic _folderLogic = FolderLogic();
-
-  @override
-  void dispose() {
-    _folderLogic.dispose();
-    super.dispose();
-  }
+  // Now accepts folderLogic from the LayoutManager
+  const HomePage({super.key, required this.folderLogic});
 
   @override
   Widget build(BuildContext context) {
@@ -37,25 +27,35 @@ class _HomePageState extends State<HomePage> {
         ),
       ),
       body: ListenableBuilder(
-        listenable: _folderLogic,
+        listenable: folderLogic,
         builder: (context, child) {
-          if (_folderLogic.isLoading) {
-            return const Center(
-              child: CircularProgressIndicator(color: Color(0xFF33B996)),
+          if (folderLogic.isLoading) {
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  CircularProgressIndicator(color: primaryColor),
+                  const SizedBox(height: 16),
+                  Text(
+                    folderLogic.loadingStatus,
+                    style: const TextStyle(color: Colors.grey),
+                  ),
+                ],
+              ),
             );
           }
 
-          if (_folderLogic.folderPath != null) {
-            return _buildActiveFolder();
+          if (folderLogic.folderPath != null) {
+            return _buildActiveFolder(context);
           } else {
-            return _buildNoFolder();
+            return _buildNoFolder(context);
           }
         },
       ),
     );
   }
 
-  Widget _buildNoFolder() {
+  Widget _buildNoFolder(BuildContext context) {
     final primaryColor = Theme.of(context).colorScheme.primary;
 
     return Center(
@@ -83,7 +83,7 @@ class _HomePageState extends State<HomePage> {
           ),
           const SizedBox(height: 30),
           OutlinedButton.icon(
-            onPressed: _folderLogic.selectFolder,
+            onPressed: folderLogic.selectFolder,
             style: OutlinedButton.styleFrom(
               side: BorderSide(color: primaryColor, width: 2),
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
@@ -91,10 +91,10 @@ class _HomePageState extends State<HomePage> {
                 borderRadius: BorderRadius.circular(12),
               ),
             ),
-            icon: const Icon(Icons.folder_open),
-            label: const Text(
+            icon: Icon(Icons.folder_open, color: primaryColor),
+            label: Text(
               "Select Local Folder",
-              style: TextStyle(fontSize: 16),
+              style: TextStyle(fontSize: 16, color: primaryColor),
             ),
           ),
         ],
@@ -102,10 +102,10 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget _buildActiveFolder() {
+  Widget _buildActiveFolder(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.transparent, // Keeps the dark theme
-      body: _folderLogic.allNotes.isEmpty
+      backgroundColor: Colors.transparent,
+      body: folderLogic.allNotes.isEmpty
           ? const Center(
               child: Text(
                 "Folder is empty. Create a note!",
@@ -114,9 +114,9 @@ class _HomePageState extends State<HomePage> {
             )
           : ListView.builder(
               padding: const EdgeInsets.all(16),
-              itemCount: _folderLogic.allNotes.length,
+              itemCount: folderLogic.allNotes.length,
               itemBuilder: (context, index) {
-                final note = _folderLogic.allNotes[index];
+                final note = folderLogic.allNotes[index];
                 return Card(
                   color: Theme.of(context).colorScheme.surface,
                   elevation: 0,
@@ -136,8 +136,7 @@ class _HomePageState extends State<HomePage> {
                     subtitle: Text(
                       note.content,
                       maxLines: 2,
-                      overflow:
-                          TextOverflow.ellipsis, // Cuts off long text with ...
+                      overflow: TextOverflow.ellipsis,
                       style: const TextStyle(color: Colors.grey),
                     ),
                     onTap: () {
@@ -145,7 +144,7 @@ class _HomePageState extends State<HomePage> {
                         context,
                         MaterialPageRoute(
                           builder: (context) => NoteEditorPage(
-                            folderLogic: _folderLogic,
+                            folderLogic: folderLogic,
                             note: note,
                           ),
                         ),
@@ -155,7 +154,6 @@ class _HomePageState extends State<HomePage> {
                 );
               },
             ),
-      // THE CREATE NOTE BUTTON
       floatingActionButton: FloatingActionButton(
         backgroundColor: Theme.of(context).colorScheme.primary,
         child: const Icon(Icons.edit, color: Colors.black),
@@ -163,7 +161,7 @@ class _HomePageState extends State<HomePage> {
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (context) => NoteEditorPage(folderLogic: _folderLogic),
+              builder: (context) => NoteEditorPage(folderLogic: folderLogic),
             ),
           );
         },
