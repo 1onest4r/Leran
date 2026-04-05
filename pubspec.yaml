@@ -26,9 +26,6 @@ dependencies:
   #for providing the isar db path for internal disk
   path_provider: ^2.1.5
 
-  #for listening to folder events
-  watcher: ^1.2.1
-
 dev_dependencies:
   flutter_test:
     sdk: flutter

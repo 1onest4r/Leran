@@ -63,7 +63,7 @@ class IsarService {
   //fetch all notes to show on the home page (limiting at 500)
   Future<List<Note>> getAllNotes() async {
     final isar = await db;
-    return await isar.notes.where().sortByTitle().limit(500).findAll();
+    return await isar.notes.where().sortByUpdateAtDesc().limit(500).findAll();
   }
 
   //fetch recently modified notes for the default search page view
