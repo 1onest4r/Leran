@@ -6,6 +6,8 @@ isar
 
 flutter pub run build_runner build (missing database code generator)
 
+- [ ] find the issue that is causing the app feeling laggy
+- [ ] figure out a way to save the current state (without reloading the whole ui)
 - [ ] add keyboard keys for shortcut hold alt for showing the shortcut keys specifically for desktop version
 - [ ] add option for loading some chunks of the whole file for both home page and search
 - [ ] split the note logic from folder_logic and integrate tags as ~tag name~ so the name must be between ~~ marks
