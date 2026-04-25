@@ -1,6 +1,7 @@
-import 'dart:io';
+import 'dart:io' show Platform;
 import 'package:flutter/material.dart';
 import 'package:window_manager/window_manager.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 
 import 'package:leran/ui/styling/theme_palette.dart';
 import 'package:leran/ui/styling/layout_manager.dart';
@@ -10,27 +11,24 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   // 2. Check for Desktop (Linux/Windows/Mac)
-  if (Platform.isLinux || Platform.isWindows || Platform.isMacOS) {
-    // Initialize the window manager
-    await windowManager.ensureInitialized();
+  if (!kIsWeb) {
+    if (Platform.isLinux || Platform.isWindows || Platform.isMacOS) {
+      await windowManager.ensureInitialized();
 
-    WindowOptions windowOptions = const WindowOptions(
-      size: Size(1280, 720), // The default size when the app opens
-      minimumSize: Size(
-        360,
-        500,
-      ), // THE HARD LOCK: User cannot shrink smaller than this
-      center: true, // Opens the app in the middle of the screen
-      backgroundColor: Colors.transparent,
-      skipTaskbar: false,
-      title: "leran", // Your App Name
-    );
+      WindowOptions windowOptions = const WindowOptions(
+        size: Size(1280, 720),
+        minimumSize: Size(360, 500),
+        center: true,
+        backgroundColor: Colors.transparent,
+        skipTaskbar: false,
+        title: "leran",
+      );
 
-    // 3. Wait until the window is ready, then show it
-    windowManager.waitUntilReadyToShow(windowOptions, () async {
-      await windowManager.show();
-      await windowManager.focus();
-    });
+      windowManager.waitUntilReadyToShow(windowOptions, () async {
+        await windowManager.show();
+        await windowManager.focus();
+      });
+    }
   }
 
   // 4. Finally, start the app (This runs on both Android and Linux)
