@@ -1,18 +1,19 @@
-import 'dart:io' show Platform;
+import 'package:flutter/foundation.dart'
+    show kIsWeb, defaultTargetPlatform, TargetPlatform;
 import 'package:flutter/material.dart';
 import 'package:window_manager/window_manager.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
 
 import 'package:leran/ui/styling/theme_palette.dart';
 import 'package:leran/ui/styling/layout_manager.dart';
 
 void main() async {
-  // 1. Mandatory: Ensures Flutter is ready before we talk to the OS
   WidgetsFlutterBinding.ensureInitialized();
 
-  // 2. Check for Desktop (Linux/Windows/Mac)
+  // 100% Web-Safe Platform Check (No dart:io needed!)
   if (!kIsWeb) {
-    if (Platform.isLinux || Platform.isWindows || Platform.isMacOS) {
+    if (defaultTargetPlatform == TargetPlatform.windows ||
+        defaultTargetPlatform == TargetPlatform.linux ||
+        defaultTargetPlatform == TargetPlatform.macOS) {
       await windowManager.ensureInitialized();
 
       WindowOptions windowOptions = const WindowOptions(
@@ -31,7 +32,6 @@ void main() async {
     }
   }
 
-  // 4. Finally, start the app (This runs on both Android and Linux)
   runApp(const LeranApp());
 }
 
@@ -43,11 +43,9 @@ class LeranApp extends StatelessWidget {
     return MaterialApp(
       title: 'Leran',
       debugShowCheckedModeBanner: false,
-
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
       themeMode: ThemeMode.dark,
-
       home: const LayoutManager(),
     );
   }

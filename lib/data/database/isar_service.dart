@@ -1,6 +1,7 @@
 import 'package:isar/isar.dart';
 import 'package:path_provider/path_provider.dart';
 import '../models/note.dart';
+import 'package:flutter/foundation.dart' show kIsWeb; // <-- ADD THIS
 
 class IsarService {
   //late is for "i promise to initialize this before using"
@@ -11,15 +12,23 @@ class IsarService {
   }
 
   Future<Isar> openDB() async {
-    //check if its already open so we dont crash the app
+    // --- WEB FIX: Browsers don't have a file system directory ---
+    if (kIsWeb) {
+      if (Isar.instanceNames.isEmpty) {
+        return await Isar.open(
+          [NoteSchema],
+          directory:
+              '', // Isar uses IndexedDB on the web, so it doesn't need a path!
+        );
+      }
+      return Future.value(Isar.getInstance());
+    }
+
+    // --- DESKTOP / MOBILE LOGIC ---
     if (Isar.instanceNames.isEmpty) {
-      //get the safe, hidden system directory "not the user's folder"
       final dir = await getApplicationDocumentsDirectory();
 
-      return await Isar.open(
-        [NoteSchema], //this comes from note.g.dart
-        directory: dir.path,
-      );
+      return await Isar.open([NoteSchema], directory: dir.path);
     }
     return Future.value(Isar.getInstance());
   }
