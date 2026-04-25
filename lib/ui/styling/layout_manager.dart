@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:leran/logic/folder_logic.dart';
-import 'dart:io';
+
+// 1. REMOVED the 'dart:io' import!
 
 import '../pages/cluster_page.dart';
 import '../pages/home_page.dart';
@@ -38,8 +39,8 @@ class _LayoutManagerState extends State<LayoutManager> {
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        //breakpoint 600px
-        if (Platform.isAndroid || Platform.isIOS) {
+        // 2. SAFE CHECK: Decide layout based on screen width instead of Operating System
+        if (constraints.maxWidth < 600) {
           return MobileLayout(
             currentIndex: _currentIndex,
             onIndexChanged: (index) => setState(() => _currentIndex = index),
