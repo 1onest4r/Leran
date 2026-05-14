@@ -6,7 +6,16 @@ class NoteEditorPage extends StatefulWidget {
   final FolderLogic folderLogic;
   final Note? note;
 
-  const NoteEditorPage({super.key, required this.folderLogic, this.note});
+  final bool isEmbedded;
+  final VoidCallback? onClosed;
+
+  const NoteEditorPage({
+    super.key,
+    required this.folderLogic,
+    this.note,
+    this.isEmbedded = false,
+    this.onClosed,
+  });
 
   @override
   State<NoteEditorPage> createState() => _NoteEditorPageState();
@@ -17,6 +26,12 @@ class _NoteEditorPageState extends State<NoteEditorPage> {
   late TextEditingController _contentController;
   late String _currentFilePath;
 
+  // NEW: Memory variables to prevent the background sync from erasing your typing!
+  late String _lastKnownDbTitle;
+  late String _lastKnownDbContent;
+
+  bool _isSaved = false;
+
   @override
   void initState() {
     super.initState();
@@ -24,14 +39,18 @@ class _NoteEditorPageState extends State<NoteEditorPage> {
     _contentController = TextEditingController(
       text: widget.note?.content ?? "",
     );
-
     _currentFilePath = widget.note?.filePath ?? "";
+
+    // Initialize our memory
+    _lastKnownDbTitle = widget.note?.title ?? "";
+    _lastKnownDbContent = widget.note?.content ?? "";
 
     widget.folderLogic.addListener(_onFolderLogicUpdated);
   }
 
   @override
   void dispose() {
+    _saveNoteSilently();
     widget.folderLogic.removeListener(_onFolderLogicUpdated);
     _titleController.dispose();
     _contentController.dispose();
@@ -39,70 +58,71 @@ class _NoteEditorPageState extends State<NoteEditorPage> {
   }
 
   void _onFolderLogicUpdated() {
-    if (_currentFilePath.isEmpty) {
-      return;
-    }
+    if (_currentFilePath.isEmpty) return;
 
     if (widget.folderLogic.lastMovedFromPath == _currentFilePath) {
       _currentFilePath = widget.folderLogic.lastMovedToPath!;
-
       if (widget.note != null) {
         widget.note!.filePath = _currentFilePath;
       }
     }
 
     try {
-      //find the live version of this note in the database
       final liveNote = widget.folderLogic.allNotes.firstWhere(
         (n) => n.filePath == _currentFilePath,
       );
 
-      if (liveNote.title != _titleController.text) {
+      // ONLY overwrite if the DB version is different from what we last saw AND different from what we are typing.
+      // This means another app (like Syncthing or VS Code) changed the file!
+      if (liveNote.title != _lastKnownDbTitle &&
+          liveNote.title != _titleController.text) {
         _titleController.text = liveNote.title;
+        _lastKnownDbTitle = liveNote.title; // Update memory
       }
 
-      //update the content (preserving cursor position)
-      if (liveNote.content != _contentController.text) {
+      if (liveNote.content != _lastKnownDbContent &&
+          liveNote.content != _contentController.text) {
         final cursorPosition = _contentController.selection;
         _contentController.text = liveNote.content;
+        _lastKnownDbContent = liveNote.content; // Update memory
 
-        //safely restore the cursor
+        // Restore cursor safely
         if (cursorPosition.baseOffset >= 0 &&
             cursorPosition.baseOffset <= liveNote.content.length) {
           _contentController.selection = cursorPosition;
         } else {
-          //if the new content is shorter, place cursor at the end
           _contentController.selection = TextSelection.collapsed(
             offset: liveNote.content.length,
           );
         }
       }
-
-      //update title
-      if (liveNote.title != _titleController.text) {
-        _titleController.text = liveNote.title;
-      }
     } catch (e) {
-      print("Note is deleted or renamed externally");
+      // The note is either brand new (not in DB yet) or was deleted externally. We safely ignore.
     }
   }
 
-  void _saveNote() async {
+  void _saveNoteSilently() {
+    if (_isSaved) return;
+    _isSaved = true;
+
     final title = _titleController.text;
     final content = _contentController.text;
 
-    if (title.isEmpty && content.isEmpty) {
-      Navigator.pop(context);
-      return;
-    }
+    if (title.isEmpty && content.isEmpty) return;
 
     if (widget.note == null) {
-      await widget.folderLogic.createAndSaveNote(title, content);
+      widget.folderLogic.createAndSaveNote(title, content);
     } else {
-      await widget.folderLogic.updateNote(widget.note!, title, content);
+      if (title != widget.note!.title || content != widget.note!.content) {
+        widget.folderLogic.updateNote(widget.note!, title, content);
+      }
     }
+  }
 
-    if (mounted) Navigator.pop(context); //go back to folder
+  void _saveNote() {
+    _saveNoteSilently();
+    if (!widget.isEmbedded && mounted) Navigator.pop(context);
+    if (widget.isEmbedded && widget.onClosed != null) widget.onClosed!();
   }
 
   @override
@@ -111,12 +131,18 @@ class _NoteEditorPageState extends State<NoteEditorPage> {
     final primaryColor = theme.colorScheme.primary;
 
     return Scaffold(
+      backgroundColor: widget.isEmbedded
+          ? Colors.transparent
+          : theme.scaffoldBackgroundColor,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: primaryColor),
-          onPressed: _saveNote, // Save automatically when hitting back!
+          icon: Icon(
+            widget.isEmbedded ? Icons.close : Icons.arrow_back,
+            color: primaryColor,
+          ),
+          onPressed: _saveNote,
         ),
         actions: [
           IconButton(
@@ -129,7 +155,6 @@ class _NoteEditorPageState extends State<NoteEditorPage> {
         padding: const EdgeInsets.all(20.0),
         child: Column(
           children: [
-            // TITLE INPUT
             TextField(
               controller: _titleController,
               style: theme.textTheme.headlineMedium,
@@ -141,12 +166,10 @@ class _NoteEditorPageState extends State<NoteEditorPage> {
               ),
             ),
             const Divider(color: Colors.white10),
-            // CONTENT INPUT
             Expanded(
               child: TextField(
                 controller: _contentController,
-                maxLines:
-                    null, // Makes it expand infinitely like a real note app
+                maxLines: null,
                 style: theme.textTheme.bodyLarge,
                 decoration: const InputDecoration(
                   hintText: "Start typing...",

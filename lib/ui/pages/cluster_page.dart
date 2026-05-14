@@ -42,9 +42,14 @@ class ClusterPage extends StatelessWidget {
                     color: primaryColor.withOpacity(0.4),
                   ),
                   const SizedBox(height: 20),
-                  const Text(
+                  Text(
                     "No Tags Found",
-                    style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                    style: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                      color:
+                          theme.colorScheme.onSurface, // Fix: adapts to theme
+                    ),
                   ),
                   const SizedBox(height: 10),
                   const Padding(
@@ -83,7 +88,9 @@ class ClusterPage extends StatelessWidget {
                 ),
                 child: Container(
                   decoration: BoxDecoration(
-                    color: theme.colorScheme.surface, // Uses proper dark theme
+                    color: theme
+                        .colorScheme
+                        .surface, // Uses proper dark/light theme
                     borderRadius: BorderRadius.circular(24),
                   ),
                   child: Column(
@@ -96,8 +103,10 @@ class ClusterPage extends StatelessWidget {
                         "#$tag#",
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: Colors.white,
+                        style: TextStyle(
+                          color: theme
+                              .colorScheme
+                              .onSurface, // Fix: adapts to theme
                           fontWeight: FontWeight.bold,
                           fontSize: 16,
                         ),
@@ -123,12 +132,17 @@ class ClusterPage extends StatelessWidget {
 
   // Creates a beautiful little 2x2 grid representing the notes inside the cluster
   Widget _buildAppFolderIcon(List<Note> notes, ThemeData theme) {
+    // Check if we are in dark mode to change the background of the mini-folder
+    final isDark = theme.brightness == Brightness.dark;
+
     return Container(
       width: 64,
       height: 64,
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
-        color: const Color(0xFF2A2A2A),
+        color: isDark
+            ? const Color(0xFF2A2A2A)
+            : const Color(0xFFE5E5E5), // Fix: soft grey in light mode
         borderRadius: BorderRadius.circular(16),
       ),
       child: Wrap(
@@ -159,7 +173,8 @@ class _ClusterNotesPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final primaryColor = Theme.of(context).colorScheme.primary;
+    final theme = Theme.of(context);
+    final primaryColor = theme.colorScheme.primary;
 
     return Scaffold(
       appBar: AppBar(
@@ -193,7 +208,7 @@ class _ClusterNotesPage extends StatelessWidget {
             itemBuilder: (context, index) {
               final note = notes[index];
               return Card(
-                color: Theme.of(context).colorScheme.surface,
+                color: theme.colorScheme.surface,
                 elevation: 0,
                 margin: const EdgeInsets.only(bottom: 12),
                 shape: RoundedRectangleBorder(
@@ -203,9 +218,10 @@ class _ClusterNotesPage extends StatelessWidget {
                   contentPadding: const EdgeInsets.all(16),
                   title: Text(
                     note.title.isEmpty ? "Untitled" : note.title,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontWeight: FontWeight.bold,
-                      color: Colors.white,
+                      color:
+                          theme.colorScheme.onSurface, // Fix: adapts to theme
                     ),
                   ),
                   subtitle: Text(
