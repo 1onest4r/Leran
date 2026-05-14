@@ -90,14 +90,22 @@ class DatabaseService {
     await database.delete('notes');
   }
 
-  Future<List<Note>> getAllNotes() async {
-    final database = await db;
-    final maps = await database.query(
-      'notes',
-      orderBy: 'updateAt DESC',
-      limit: 500,
-    );
-    return maps.map((map) => Note.fromMap(map)).toList();
+  Future<List<Note>> getAllNotes({
+    int limit = 50,
+    String orderBy = 'updateAt DESC',
+  }) async {
+    try {
+      final database = await db;
+      final maps = await database.query(
+        'notes',
+        orderBy: orderBy,
+        limit: limit,
+      );
+      return maps.map((map) => Note.fromMap(map)).toList();
+    } catch (e) {
+      print("Database read error: $e");
+      return []; // Prevents the app from crashing if the DB gets locked
+    }
   }
 
   Future<List<Note>> getRecentNotes({int limit = 30}) async {

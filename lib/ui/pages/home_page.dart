@@ -1,12 +1,10 @@
 import 'package:flutter/material.dart';
-
 import '../../logic/folder_logic.dart';
 import 'note_editor_page.dart';
 
 class HomePage extends StatelessWidget {
   final FolderLogic folderLogic;
 
-  // Now accepts folderLogic from the LayoutManager
   const HomePage({super.key, required this.folderLogic});
 
   @override
@@ -25,23 +23,37 @@ class HomePage extends StatelessWidget {
             letterSpacing: 1.2,
           ),
         ),
+        actions: [
+          // Shows a tiny loading spinner in the corner while background sync happens
+          ListenableBuilder(
+            listenable: folderLogic,
+            builder: (context, _) {
+              if (folderLogic.isSyncingBackground) {
+                return Padding(
+                  padding: const EdgeInsets.only(right: 20.0),
+                  child: Center(
+                    child: SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        color: primaryColor,
+                        strokeWidth: 2,
+                      ),
+                    ),
+                  ),
+                );
+              }
+              return const SizedBox.shrink();
+            },
+          ),
+        ],
       ),
       body: ListenableBuilder(
         listenable: folderLogic,
         builder: (context, child) {
           if (folderLogic.isLoading) {
             return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  CircularProgressIndicator(color: primaryColor),
-                  const SizedBox(height: 16),
-                  Text(
-                    folderLogic.loadingStatus,
-                    style: const TextStyle(color: Colors.grey),
-                  ),
-                ],
-              ),
+              child: CircularProgressIndicator(color: primaryColor),
             );
           }
 
@@ -55,9 +67,9 @@ class HomePage extends StatelessWidget {
     );
   }
 
+  // ... _buildNoFolder remains exactly the same ...
   Widget _buildNoFolder(BuildContext context) {
     final primaryColor = Theme.of(context).colorScheme.primary;
-
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -105,55 +117,115 @@ class HomePage extends StatelessWidget {
   Widget _buildActiveFolder(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.transparent,
-      body: folderLogic.allNotes.isEmpty
-          ? const Center(
-              child: Text(
-                "Folder is empty. Create a note!",
-                style: TextStyle(color: Colors.grey),
-              ),
-            )
-          : ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: folderLogic.allNotes.length,
-              itemBuilder: (context, index) {
-                final note = folderLogic.allNotes[index];
-                return Card(
-                  color: Theme.of(context).colorScheme.surface,
-                  elevation: 0,
-                  margin: const EdgeInsets.only(bottom: 12),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: ListTile(
-                    contentPadding: const EdgeInsets.all(16),
-                    title: Text(
-                      note.title.isEmpty ? "Untitled" : note.title,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
+      body: Column(
+        children: [
+          // --- NEW: Filters Toolbar ---
+          Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: 16.0,
+              vertical: 8.0,
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                // Sort Dropdown
+                DropdownButton<SortOption>(
+                  value: folderLogic.currentSort,
+                  dropdownColor: Theme.of(context).colorScheme.surface,
+                  underline: const SizedBox(),
+                  icon: const Icon(Icons.sort, color: Colors.grey, size: 18),
+                  style: const TextStyle(color: Colors.grey, fontSize: 14),
+                  items: const [
+                    DropdownMenuItem(
+                      value: SortOption.dateDesc,
+                      child: Text("Last Modified"),
                     ),
-                    subtitle: Text(
-                      note.content,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(color: Colors.grey),
+                    DropdownMenuItem(
+                      value: SortOption.alphaAsc,
+                      child: Text("A to Z"),
                     ),
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => NoteEditorPage(
-                            folderLogic: folderLogic,
-                            note: note,
+                    DropdownMenuItem(
+                      value: SortOption.alphaDesc,
+                      child: Text("Z to A"),
+                    ),
+                  ],
+                  onChanged: (val) {
+                    if (val != null) folderLogic.changeSortOption(val);
+                  },
+                ),
+                // Limit Dropdown
+                DropdownButton<int>(
+                  value: folderLogic.displayLimit,
+                  dropdownColor: Theme.of(context).colorScheme.surface,
+                  underline: const SizedBox(),
+                  style: const TextStyle(color: Colors.grey, fontSize: 14),
+                  items: [25, 50, 100, 250, 500].map((int val) {
+                    return DropdownMenuItem<int>(
+                      value: val,
+                      child: Text("Show $val"),
+                    );
+                  }).toList(),
+                  onChanged: (val) {
+                    if (val != null) folderLogic.changeDisplayLimit(val);
+                  },
+                ),
+              ],
+            ),
+          ),
+          // --- Notes List ---
+          Expanded(
+            child: folderLogic.allNotes.isEmpty
+                ? const Center(
+                    child: Text(
+                      "Folder is empty. Create a note!",
+                      style: TextStyle(color: Colors.grey),
+                    ),
+                  )
+                : ListView.builder(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    itemCount: folderLogic.allNotes.length,
+                    itemBuilder: (context, index) {
+                      final note = folderLogic.allNotes[index];
+                      return Card(
+                        color: Theme.of(context).colorScheme.surface,
+                        elevation: 0,
+                        margin: const EdgeInsets.only(bottom: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: ListTile(
+                          contentPadding: const EdgeInsets.all(16),
+                          title: Text(
+                            note.title.isEmpty ? "Untitled" : note.title,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
                           ),
+                          subtitle: Text(
+                            note.content,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(color: Colors.grey),
+                          ),
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => NoteEditorPage(
+                                  folderLogic: folderLogic,
+                                  note: note,
+                                ),
+                              ),
+                            );
+                          },
                         ),
                       );
                     },
                   ),
-                );
-              },
-            ),
+          ),
+        ],
+      ),
       floatingActionButton: FloatingActionButton(
         backgroundColor: Theme.of(context).colorScheme.primary,
         child: const Icon(Icons.edit, color: Colors.black),

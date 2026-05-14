@@ -7,10 +7,16 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../data/database/database_service.dart';
 import '../data/models/note.dart';
 
+enum SortOption { dateDesc, alphaAsc, alphaDesc }
+
 class FolderLogic extends ChangeNotifier {
   String? folderPath;
+
   bool isLoading = true;
-  String loadingStatus = "Loading...";
+  bool isSyncingBackground = false;
+
+  SortOption currentSort = SortOption.dateDesc;
+  int displayLimit = 50;
 
   final DatabaseService dbService = DatabaseService();
   List<Note> allNotes = [];
@@ -32,6 +38,16 @@ class FolderLogic extends ChangeNotifier {
     super.dispose();
   }
 
+  void changeSortOption(SortOption option) {
+    currentSort = option;
+    refreshNotesList();
+  }
+
+  void changeDisplayLimit(int limit) {
+    displayLimit = limit;
+    refreshNotesList();
+  }
+
   //if the user had already picked folder in the past
   Future<void> loadSavedFolder() async {
     final prefs = await SharedPreferences.getInstance();
@@ -43,6 +59,8 @@ class FolderLogic extends ChangeNotifier {
     if (folderPath != null) {
       await refreshNotesList();
       _startWatchingDirectory(folderPath!);
+
+      _syncFolderMassive(folderPath!);
     }
 
     isLoading = false;
@@ -52,7 +70,15 @@ class FolderLogic extends ChangeNotifier {
   }
 
   Future<void> refreshNotesList() async {
-    allNotes = await dbService.getAllNotes();
+    //translate the enum into SQL commands
+    String orderBy = 'updateAt DESC';
+    if (currentSort == SortOption.alphaAsc) orderBy = 'title ASC';
+    if (currentSort == SortOption.alphaDesc) orderBy = 'title DESC';
+
+    allNotes = await dbService.getAllNotes(
+      limit: displayLimit,
+      orderBy: orderBy,
+    );
     notifyListeners();
   }
 
@@ -63,40 +89,41 @@ class FolderLogic extends ChangeNotifier {
     );
 
     if (selectedDirectory != null) {
+      isLoading = true;
+      notifyListeners();
+
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('folder_path', selectedDirectory);
       folderPath = selectedDirectory;
-      await _syncFolderMassive(selectedDirectory);
+
+      await dbService.clearAllNotes(); //clear old notes
       await refreshNotesList(); //load empty list
+
+      isLoading = false;
+      notifyListeners();
 
       _startWatchingDirectory(selectedDirectory);
       //tells the ui th folder is picked
-      notifyListeners();
+      _syncFolderMassive(selectedDirectory);
     }
   }
 
   Future<void> _syncFolderMassive(String path) async {
-    isLoading = true;
-    loadingStatus = "Scanning directory...";
+    if (isSyncingBackground) return; // Prevent double-syncs
+
+    isSyncingBackground = true;
     notifyListeners();
 
     try {
-      await dbService.clearAllNotes(); // Reset DB for the new folder
-
       final directory = Directory(path);
-      // Change recursive to true if you have subfolders inside your main folder
       final entities = await directory.list(recursive: true).toList();
       final mdFiles = entities
           .whereType<File>()
           .where((f) => f.path.endsWith('.md'))
           .toList();
 
-      final int batchSize = 200; // Processes 200 files at a time to save RAM
+      final int batchSize = 50; // Small batch size!
       for (int i = 0; i < mdFiles.length; i += batchSize) {
-        loadingStatus =
-            "Syncing files ${i} to ${i + batchSize < mdFiles.length ? i + batchSize : mdFiles.length} of ${mdFiles.length}...";
-        notifyListeners();
-
         final end = (i + batchSize < mdFiles.length)
             ? i + batchSize
             : mdFiles.length;
@@ -106,7 +133,6 @@ class FolderLogic extends ChangeNotifier {
         for (var file in batch) {
           final stat = await file.stat();
           final content = await file.readAsString();
-          // Extract file name without extension safely
           final title = file.uri.pathSegments.last.replaceAll('.md', '');
 
           notesBatch.add(
@@ -119,12 +145,17 @@ class FolderLogic extends ChangeNotifier {
         }
 
         await dbService.saveNotesBatch(notesBatch);
+        await refreshNotesList(); // Update UI gently
+
+        // CRITICAL MAGIC: This yields to the Flutter engine so it can draw frames
+        // and keep the app at 60fps without crashing!
+        await Future.delayed(const Duration(milliseconds: 100));
       }
     } catch (e) {
-      print("Mass sync error: $e");
+      print("Background mass sync error: $e");
     }
 
-    isLoading = false;
+    isSyncingBackground = false;
     notifyListeners();
   }
 
