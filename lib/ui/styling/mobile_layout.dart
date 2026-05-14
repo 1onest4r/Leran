@@ -16,15 +16,24 @@ class MobileLayout extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
+    // NEW: This detects the height of the phone's 3-button bar or gesture pill
+    final bottomPadding = MediaQuery.of(context).padding.bottom;
+
     return Scaffold(
       body: ConstrainedBox(
         constraints: const BoxConstraints(minWidth: 320, minHeight: 480),
         child: pages[currentIndex],
       ),
       bottomNavigationBar: Container(
-        height: 80,
+        // We dynamically add the OS padding to our desired 70px height
+        // so the background color extends beautifully behind the buttons
+        height: 70 + bottomPadding,
         color: theme.scaffoldBackgroundColor,
-        padding: const EdgeInsets.symmetric(horizontal: 20),
+        padding: EdgeInsets.only(
+          left: 20,
+          right: 20,
+          bottom: bottomPadding, // This pushes our icons UP and out of the way!
+        ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
@@ -40,7 +49,6 @@ class MobileLayout extends StatelessWidget {
 
   Widget _navIcon(BuildContext context, IconData icon, int index) {
     bool isActive = currentIndex == index;
-
     final primaryColor = Theme.of(context).colorScheme.primary;
 
     return GestureDetector(
