@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import '../data/database/isar_service.dart';
+import '../data/database/database_service.dart';
 import '../data/models/note.dart';
 
 class FolderLogic extends ChangeNotifier {
@@ -12,7 +12,7 @@ class FolderLogic extends ChangeNotifier {
   bool isLoading = true;
   String loadingStatus = "Loading...";
 
-  final IsarService dbService = IsarService();
+  final DatabaseService dbService = DatabaseService();
   List<Note> allNotes = [];
 
   StreamSubscription<FileSystemEvent>? _directoryWatcher;
@@ -330,5 +330,22 @@ class FolderLogic extends ChangeNotifier {
     } catch (e) {
       print("File delete error: $e");
     }
+  }
+
+  // NEW: Groups all loaded notes by their tags.
+  // Returns a Map where the Key is the tag name, and the Value is a List of Notes.
+  Map<String, List<Note>> get clusteredNotes {
+    final Map<String, List<Note>> clusters = {};
+
+    for (var note in allNotes) {
+      for (var tag in note.tags) {
+        if (!clusters.containsKey(tag)) {
+          clusters[tag] = [];
+        }
+        clusters[tag]!.add(note);
+      }
+    }
+
+    return clusters;
   }
 }

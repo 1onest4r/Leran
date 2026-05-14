@@ -38,3 +38,7 @@ so user's whole db could live on one or maybe devices and whenever the user want
 
 it uses TLS (transfer layer security) usually used with HTTP protocol to secure data being sent
 since the HTTP communication consists of just plain texts the TLS works perfectly for this app
+
+## removed isar db due to maintenance issue
+
+isar was bs so changed to sqflite

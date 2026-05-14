@@ -19,10 +19,10 @@ dependencies:
   #for remembering permission
   shared_preferences: ^2.5.5
 
-  #no sql db
-  isar: ^3.1.0+1
-  #flutter plugin for isar db
-  isar_flutter_libs: ^3.1.0+1
+  sqflite: ^2.3.0 # for android/IOS/macOS
+  sqflite_common_ffi: ^2.3.0 #for windows/linux
+  path: ^1.8.3
+
   #for providing the isar db path for internal disk
   path_provider: ^2.1.5
 

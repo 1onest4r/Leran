@@ -32,7 +32,7 @@ class _LayoutManagerState extends State<LayoutManager> {
     final List<Widget> pages = [
       HomePage(folderLogic: _folderLogic),
       SearchPage(folderLogic: _folderLogic),
-      const ClusterPage(),
+      ClusterPage(folderLogic: _folderLogic),
       SettingsPage(folderLogic: _folderLogic),
     ];
 
