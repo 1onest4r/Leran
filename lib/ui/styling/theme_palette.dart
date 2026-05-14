@@ -2,24 +2,31 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class AppTheme {
-  //color palette
-  static const Color primary = Color(0xFF50C878);
+  // Predefined color options for the settings page
+  static const List<Color> colorOptions = [
+    Color(0xFF50C878), // Emerald Green (Original)
+    Color(0xFF5E81AC), // Nordic Blue
+    Color(0xFFB48EAD), // Muted Purple
+    Color(0xFFD08770), // Terracotta
+    Color(0xFFBF616A), // Soft Red
+  ];
+
   static const Color secondary = Color(0xFF56815E);
   static const Color tertiary = Color(0xFFFF9587);
   static const Color neutral = Color(0xFF121212);
 
-  //surface colors for cards and fiels?
   static const Color darkSurface = Color(0xFF1E1E1E);
   static const Color lightSurface = Color(0xFFFFFFFF);
 
-  static ThemeData get darkTheme {
+  // Notice how this now requires a dynamic color variable
+  static ThemeData getDarkTheme(Color primaryColor) {
     return ThemeData(
       useMaterial3: true,
       brightness: Brightness.dark,
       scaffoldBackgroundColor: neutral,
 
-      colorScheme: const ColorScheme.dark(
-        primary: primary,
+      colorScheme: ColorScheme.dark(
+        primary: primaryColor,
         secondary: secondary,
         tertiary: tertiary,
         surface: darkSurface,
@@ -42,7 +49,6 @@ class AppTheme {
         ),
       ),
 
-      //input decor (the search bar look)
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: const Color(0xFF242424),
@@ -53,10 +59,9 @@ class AppTheme {
         hintStyle: const TextStyle(color: Colors.grey),
       ),
 
-      //button themes
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          backgroundColor: primary,
+          backgroundColor: primaryColor,
           foregroundColor: Colors.black,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
         ),
@@ -64,15 +69,14 @@ class AppTheme {
     );
   }
 
-  // --- LIGHT THEME ---
-  static ThemeData get lightTheme {
+  static ThemeData getLightTheme(Color primaryColor) {
     return ThemeData(
       useMaterial3: true,
       brightness: Brightness.light,
       scaffoldBackgroundColor: const Color(0xFFF5F5F5),
 
-      colorScheme: const ColorScheme.light(
-        primary: primary,
+      colorScheme: ColorScheme.light(
+        primary: primaryColor,
         secondary: secondary,
         tertiary: tertiary,
         surface: lightSurface,

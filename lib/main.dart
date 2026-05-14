@@ -5,6 +5,7 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 import 'package:leran/ui/styling/theme_palette.dart';
 import 'package:leran/ui/styling/layout_manager.dart';
+import 'package:leran/logic/theme_logic.dart';
 
 void main() async {
   // 1. Mandatory: Ensures Flutter is ready before we talk to the OS
@@ -40,24 +41,34 @@ void main() async {
     });
   }
 
+  final themeLogic = ThemeLogic();
+  await themeLogic.loadSettings();
+
   // 4. Finally, start the app (This runs on both Android and Linux)
-  runApp(const LeranApp());
+  runApp(LeranApp(themeLogic: themeLogic));
 }
 
 class LeranApp extends StatelessWidget {
-  const LeranApp({super.key});
+  final ThemeLogic themeLogic;
+  const LeranApp({super.key, required this.themeLogic});
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Leran',
-      debugShowCheckedModeBanner: false,
+    // ListenableBuilder forces the whole app to redraw instantly when theme changes!
+    return ListenableBuilder(
+      listenable: themeLogic,
+      builder: (context, _) {
+        return MaterialApp(
+          title: 'Leran',
+          debugShowCheckedModeBanner: false,
 
-      theme: AppTheme.lightTheme,
-      darkTheme: AppTheme.darkTheme,
-      themeMode: ThemeMode.dark,
+          theme: AppTheme.getLightTheme(themeLogic.primaryColor),
+          darkTheme: AppTheme.getDarkTheme(themeLogic.primaryColor),
+          themeMode: themeLogic.themeMode,
 
-      home: const LayoutManager(),
+          home: LayoutManager(themeLogic: themeLogic),
+        );
+      },
     );
   }
 }

@@ -1,10 +1,19 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
+
 import '../../logic/folder_logic.dart';
+import '../../logic/theme_logic.dart';
+import '../styling/theme_palette.dart';
 
 class SettingsPage extends StatelessWidget {
   final FolderLogic folderLogic;
+  final ThemeLogic themeLogic;
 
-  const SettingsPage({super.key, required this.folderLogic});
+  const SettingsPage({
+    super.key,
+    required this.folderLogic,
+    required this.themeLogic,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -20,11 +29,7 @@ class SettingsPage extends StatelessWidget {
           children: [
             Text(
               "Settings",
-              style: TextStyle(
-                fontSize: 32,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-              ),
+              style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
             ),
             SizedBox(height: 8),
             Text(
@@ -35,13 +40,13 @@ class SettingsPage extends StatelessWidget {
         ),
       ),
       body: ListenableBuilder(
-        listenable: folderLogic,
+        listenable: Listenable.merge([folderLogic, themeLogic]),
         builder: (context, _) {
           return ListView(
             padding: const EdgeInsets.all(16),
             children: [
               _sectionHeader("STORAGE"),
-              _settingsCard([
+              _settingsCard(context, [
                 ListTile(
                   leading: const Icon(Icons.folder_open),
                   title: const Text("Folder Location"),
@@ -49,13 +54,10 @@ class SettingsPage extends StatelessWidget {
                     folderLogic.folderPath ?? "No folder selected",
                   ),
                   trailing: const Icon(Icons.chevron_right),
-                  onTap: folderLogic.selectFolder, // Triggers directory swap
+                  onTap: folderLogic.selectFolder,
                 ),
                 if (folderLogic.folderPath != null) ...[
-                  const Divider(
-                    color: Color.fromARGB(255, 71, 71, 71),
-                    height: 1,
-                  ),
+                  const Divider(color: Colors.white10, height: 1),
                   ListTile(
                     leading: const Icon(
                       Icons.folder_off,
@@ -69,27 +71,71 @@ class SettingsPage extends StatelessWidget {
                   ),
                 ],
               ]),
+
               const SizedBox(height: 20),
+
               _sectionHeader("APPEARANCE"),
-              _settingsCard([
+              _settingsCard(context, [
                 SwitchListTile(
                   secondary: const Icon(Icons.dark_mode_outlined),
                   title: const Text("Dark Mode"),
-                  value: true,
+                  value: themeLogic.isDarkMode,
                   activeColor: primaryColor,
-                  onChanged: (v) {},
+                  onChanged: (v) => themeLogic.toggleTheme(v),
                 ),
-                const Divider(
-                  color: Color.fromARGB(255, 71, 71, 71),
-                  height: 1,
-                ),
+                const Divider(color: Colors.white10, height: 1),
                 ListTile(
                   leading: const Icon(Icons.palette_outlined),
-                  title: const Text("Theme Primary"),
-                  trailing: CircleAvatar(
-                    radius: 8,
-                    backgroundColor: primaryColor,
+                  title: const Padding(
+                    padding: EdgeInsets.only(bottom: 8.0),
+                    child: Text("Theme Color"),
                   ),
+                  subtitle: Wrap(
+                    spacing: 12,
+                    children: AppTheme.colorOptions.map((color) {
+                      final isSelected =
+                          themeLogic.primaryColor.value == color.value;
+                      return GestureDetector(
+                        onTap: () => themeLogic.setPrimaryColor(color),
+                        child: Container(
+                          width: 32,
+                          height: 32,
+                          decoration: BoxDecoration(
+                            color: color,
+                            shape: BoxShape.circle,
+                            border: isSelected
+                                ? Border.all(color: Colors.white, width: 3)
+                                : null,
+                            boxShadow: isSelected
+                                ? [
+                                    BoxShadow(
+                                      color: color.withOpacity(0.5),
+                                      blurRadius: 8,
+                                    ),
+                                  ]
+                                : [],
+                          ),
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ),
+              ]),
+
+              const SizedBox(height: 20),
+
+              _sectionHeader("ABOUT"),
+              _settingsCard(context, [
+                ListTile(
+                  leading: const Icon(Icons.feedback_outlined),
+                  title: const Text("Feedback & Support"),
+                  subtitle: const Text("Report bugs or request features"),
+                  trailing: const Icon(
+                    Icons.open_in_new,
+                    size: 20,
+                    color: Colors.grey,
+                  ),
+                  onTap: () => _showFeedbackDialog(context),
                 ),
               ]),
             ],
@@ -99,7 +145,72 @@ class SettingsPage extends StatelessWidget {
     );
   }
 
+  // --- NEW EMAIL LAUNCHER LOGIC ---
+  Future<void> _launchEmail() async {
+    // Replace with your actual support email
+    final String targetEmail = '1onest4r.granpad@gmail.com';
+
+    // Formatting the mailto: URL safely
+    final Uri emailLaunchUri = Uri(
+      scheme: 'mailto',
+      path: targetEmail,
+      query: _encodeQueryParameters(<String, String>{
+        'subject': 'Leran App Feedback',
+        'body':
+            'Hi there,\n\nI have some feedback regarding the Leran app:\n\n',
+      }),
+    );
+
+    try {
+      if (await canLaunchUrl(emailLaunchUri)) {
+        await launchUrl(emailLaunchUri);
+      }
+    } catch (e) {
+      debugPrint("Could not launch email client: $e");
+    }
+  }
+
+  // Helper function to safely encode spaces and special characters in the email subject/body
+  String? _encodeQueryParameters(Map<String, String> params) {
+    return params.entries
+        .map(
+          (MapEntry<String, String> e) =>
+              '${Uri.encodeComponent(e.key)}=${Uri.encodeComponent(e.value)}',
+        )
+        .join('&');
+  }
+
+  void _showFeedbackDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: Theme.of(context).colorScheme.surface,
+        title: const Text("Send Feedback"),
+        content: const Text(
+          "Thanks for using Leran!\n\nIf you have any issues or feature requests, please reach out via email.",
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("Cancel", style: TextStyle(color: Colors.grey)),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context); // Close the dialog
+              _launchEmail(); // Trigger the email pop-up!
+            },
+            child: const Text(
+              "Open Gmail / Mail",
+              style: TextStyle(color: Colors.black),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _confirmDisconnect(BuildContext context) {
+    // ... same as before
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -143,10 +254,10 @@ class SettingsPage extends StatelessWidget {
     );
   }
 
-  Widget _settingsCard(List<Widget> children) {
+  Widget _settingsCard(BuildContext context, List<Widget> children) {
     return Container(
       decoration: BoxDecoration(
-        color: const Color(0xFF1E1E1E),
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(15),
       ),
       child: Column(children: children),

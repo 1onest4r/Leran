@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:leran/logic/folder_logic.dart';
+import 'package:leran/logic/theme_logic.dart';
 import 'dart:io';
 
 import '../pages/cluster_page.dart';
@@ -10,7 +11,8 @@ import 'desktop_layout.dart';
 import 'mobile_layout.dart';
 
 class LayoutManager extends StatefulWidget {
-  const LayoutManager({super.key});
+  final ThemeLogic themeLogic;
+  const LayoutManager({super.key, required this.themeLogic});
 
   @override
   State<LayoutManager> createState() => _LayoutManagerState();
@@ -33,7 +35,7 @@ class _LayoutManagerState extends State<LayoutManager> {
       HomePage(folderLogic: _folderLogic),
       SearchPage(folderLogic: _folderLogic),
       ClusterPage(folderLogic: _folderLogic),
-      SettingsPage(folderLogic: _folderLogic),
+      SettingsPage(folderLogic: _folderLogic, themeLogic: widget.themeLogic),
     ];
 
     return LayoutBuilder(

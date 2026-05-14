@@ -2,10 +2,6 @@
 
 A new Flutter project.
 
-isar
-
-flutter pub run build_runner build (missing database code generator)
-
 - [ ] find the issue that is causing the app feeling laggy
 - [ ] figure out a way to save the current state (without reloading the whole ui)
 - [ ] add keyboard keys for shortcut hold alt for showing the shortcut keys specifically for desktop version
