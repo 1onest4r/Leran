@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import '../../logic/folder_logic.dart';
 import '../../data/models/note.dart';
+import '../styling/resizable_split_view.dart';
 import 'note_editor_page.dart';
 
 class HomePage extends StatefulWidget {
@@ -16,6 +17,38 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   Note? _selectedNote;
   bool _isCreatingNew = false;
+
+  Widget _buildEmptyEditor() {
+    return Center(
+      // 1. SingleChildScrollView prevents the Bottom Overflow crash
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.edit_document,
+              size: 80,
+              color: Colors.white.withOpacity(0.1),
+            ),
+            const SizedBox(height: 20),
+            // 2. Padding prevents text from hitting the absolute edges
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0),
+              child: Text(
+                "Select a note or create a new one",
+                textAlign:
+                    TextAlign.center, // 3. Centers it neatly when squeezed
+                style: TextStyle(
+                  color: Colors.white.withOpacity(0.3),
+                  fontSize: 16,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -62,17 +95,13 @@ class _HomePageState extends State<HomePage> {
       body: ListenableBuilder(
         listenable: widget.folderLogic,
         builder: (context, child) {
-          if (widget.folderLogic.isLoading) {
+          if (widget.folderLogic.isLoading)
             return Center(
               child: CircularProgressIndicator(color: primaryColor),
             );
-          }
-
-          if (widget.folderLogic.folderPath != null) {
+          if (widget.folderLogic.folderPath != null)
             return _buildActiveFolder(context, isDesktop);
-          } else {
-            return _buildNoFolder(context);
-          }
+          return _buildNoFolder(context);
         },
       ),
     );
@@ -116,56 +145,60 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _buildActiveFolder(BuildContext context, bool isDesktop) {
-    // --- 1. The List of Notes Widget ---
     Widget listContent = Column(
       children: [
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              DropdownButton<SortOption>(
-                value: widget.folderLogic.currentSort,
-                dropdownColor: Theme.of(context).colorScheme.surface,
-                underline: const SizedBox(),
-                icon: const Icon(Icons.sort, color: Colors.grey, size: 18),
-                style: const TextStyle(color: Colors.grey, fontSize: 14),
-                items: const [
-                  DropdownMenuItem(
-                    value: SortOption.dateDesc,
-                    child: Text("Last Modified"),
-                  ),
-                  DropdownMenuItem(
-                    value: SortOption.alphaAsc,
-                    child: Text("A to Z"),
-                  ),
-                  DropdownMenuItem(
-                    value: SortOption.alphaDesc,
-                    child: Text("Z to A"),
-                  ),
-                ],
-                onChanged: (val) {
-                  if (val != null) widget.folderLogic.changeSortOption(val);
-                },
-              ),
-              DropdownButton<int>(
-                value: widget.folderLogic.displayLimit,
-                dropdownColor: Theme.of(context).colorScheme.surface,
-                underline: const SizedBox(),
-                style: const TextStyle(color: Colors.grey, fontSize: 14),
-                items: [25, 50, 100, 250, 500]
-                    .map(
-                      (int val) => DropdownMenuItem<int>(
-                        value: val,
-                        child: Text("Show $val"),
-                      ),
-                    )
-                    .toList(),
-                onChanged: (val) {
-                  if (val != null) widget.folderLogic.changeDisplayLimit(val);
-                },
-              ),
-            ],
+          child: SizedBox(
+            width: double.infinity,
+            // WRAP replaces ROW. It automatically prevents overflow by stacking if needed!
+            child: Wrap(
+              alignment: WrapAlignment.spaceBetween,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                DropdownButton<SortOption>(
+                  value: widget.folderLogic.currentSort,
+                  dropdownColor: Theme.of(context).colorScheme.surface,
+                  underline: const SizedBox(),
+                  icon: const Icon(Icons.sort, color: Colors.grey, size: 18),
+                  style: const TextStyle(color: Colors.grey, fontSize: 14),
+                  items: const [
+                    DropdownMenuItem(
+                      value: SortOption.dateDesc,
+                      child: Text("Last Modified"),
+                    ),
+                    DropdownMenuItem(
+                      value: SortOption.alphaAsc,
+                      child: Text("A to Z"),
+                    ),
+                    DropdownMenuItem(
+                      value: SortOption.alphaDesc,
+                      child: Text("Z to A"),
+                    ),
+                  ],
+                  onChanged: (val) {
+                    if (val != null) widget.folderLogic.changeSortOption(val);
+                  },
+                ),
+                DropdownButton<int>(
+                  value: widget.folderLogic.displayLimit,
+                  dropdownColor: Theme.of(context).colorScheme.surface,
+                  underline: const SizedBox(),
+                  style: const TextStyle(color: Colors.grey, fontSize: 14),
+                  items: [25, 50, 100, 250, 500]
+                      .map(
+                        (int val) => DropdownMenuItem<int>(
+                          value: val,
+                          child: Text("Show $val"),
+                        ),
+                      )
+                      .toList(),
+                  onChanged: (val) {
+                    if (val != null) widget.folderLogic.changeDisplayLimit(val);
+                  },
+                ),
+              ],
+            ),
           ),
         ),
         Expanded(
@@ -183,8 +216,6 @@ class _HomePageState extends State<HomePage> {
                   itemCount: widget.folderLogic.allNotes.length,
                   itemBuilder: (context, index) {
                     final note = widget.folderLogic.allNotes[index];
-
-                    // Highlights the card if it's currently selected on Desktop
                     final bool isSelected =
                         isDesktop &&
                         _selectedNote?.filePath == note.filePath &&
@@ -248,91 +279,48 @@ class _HomePageState extends State<HomePage> {
       ],
     );
 
-    // --- 2. Build Layout Based on Platform ---
     if (!isDesktop) {
-      // MOBILE: Full screen list
       return Scaffold(
         backgroundColor: Colors.transparent,
         body: listContent,
         floatingActionButton: FloatingActionButton(
           backgroundColor: Theme.of(context).colorScheme.primary,
           child: const Icon(Icons.edit, color: Colors.black),
-          onPressed: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) =>
-                    NoteEditorPage(folderLogic: widget.folderLogic),
-              ),
-            );
-          },
+          onPressed: () => Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) =>
+                  NoteEditorPage(folderLogic: widget.folderLogic),
+            ),
+          ),
         ),
       );
     } else {
-      // DESKTOP: Split View (Master / Detail)
-      return Row(
-        children: [
-          // Left Sidebar (The List)
-          Container(
-            width: 350,
-            decoration: const BoxDecoration(
-              border: Border(right: BorderSide(color: Colors.white10)),
-            ),
-            child: Scaffold(
-              backgroundColor: Colors.transparent,
-              body: listContent,
-              floatingActionButton: FloatingActionButton(
-                backgroundColor: Theme.of(context).colorScheme.primary,
-                child: const Icon(Icons.edit, color: Colors.black),
-                onPressed: () {
-                  setState(() {
-                    _selectedNote = null;
-                    _isCreatingNew = true;
-                  });
-                },
-              ),
-            ),
+      return ResizableSplitView(
+        leftChild: Scaffold(
+          backgroundColor: Colors.transparent,
+          body: listContent,
+          floatingActionButton: FloatingActionButton(
+            backgroundColor: Theme.of(context).colorScheme.primary,
+            child: const Icon(Icons.edit, color: Colors.black),
+            onPressed: () => setState(() {
+              _selectedNote = null;
+              _isCreatingNew = true;
+            }),
           ),
-
-          // Right Main Area (The Editor)
-          Expanded(
-            child: (_selectedNote != null || _isCreatingNew)
-                // The ValueKey forces Flutter to destroy the old editor and spawn a new one
-                // when you click a different note. This triggers the magical Autosave on dispose!
-                ? NoteEditorPage(
-                    key: ValueKey(_selectedNote?.filePath ?? "new_note_key"),
-                    folderLogic: widget.folderLogic,
-                    note: _selectedNote,
-                    isEmbedded: true,
-                    onClosed: () {
-                      setState(() {
-                        _selectedNote = null;
-                        _isCreatingNew = false;
-                      });
-                    },
-                  )
-                : Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.edit_document,
-                          size: 80,
-                          color: Colors.white.withOpacity(0.1),
-                        ),
-                        const SizedBox(height: 20),
-                        Text(
-                          "Select a note or create a new one",
-                          style: TextStyle(
-                            color: Colors.white.withOpacity(0.3),
-                            fontSize: 16,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-          ),
-        ],
+        ),
+        rightChild: (_selectedNote != null || _isCreatingNew)
+            ? NoteEditorPage(
+                key: ValueKey(_selectedNote?.filePath ?? "new_note_key"),
+                folderLogic: widget.folderLogic,
+                note: _selectedNote,
+                isEmbedded: true,
+                onClosed: () => setState(() {
+                  _selectedNote = null;
+                  _isCreatingNew = false;
+                }),
+              )
+            : _buildEmptyEditor(),
       );
     }
   }

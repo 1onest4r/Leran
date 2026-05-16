@@ -66,6 +66,13 @@ class AppTheme {
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
         ),
       ),
+
+      scrollbarTheme: ScrollbarThemeData(
+        thickness: MaterialStateProperty.all(12.0),
+        radius: const Radius.circular(10),
+        crossAxisMargin: 2.0,
+        thumbColor: MaterialStateProperty.all(Colors.white.withOpacity(0.15)),
+      ),
     );
   }
 
@@ -106,6 +113,13 @@ class AppTheme {
           borderRadius: BorderRadius.circular(12),
           borderSide: const BorderSide(color: Color(0xFFE0E0E0)),
         ),
+      ),
+
+      scrollbarTheme: ScrollbarThemeData(
+        thickness: MaterialStateProperty.all(12.0),
+        radius: const Radius.circular(10),
+        crossAxisMargin: 2.0,
+        thumbColor: MaterialStateProperty.all(Colors.black.withOpacity(0.2)),
       ),
     );
   }

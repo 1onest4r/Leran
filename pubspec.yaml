@@ -23,6 +23,8 @@ dependencies:
   sqflite_common_ffi: ^2.3.0 #for windows/linux
   path: ^1.8.3
 
+  http: ^1.6.0
+
   #for providing the isar db path for internal disk
   path_provider: ^2.1.5
 

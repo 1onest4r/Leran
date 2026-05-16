@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:leran/logic/folder_logic.dart';
 import 'package:leran/logic/theme_logic.dart';
-import 'dart:io';
+import 'dart:io'; // <-- Re-added this for Platform checks
 
 import '../pages/cluster_page.dart';
 import '../pages/home_page.dart';
@@ -20,7 +20,6 @@ class LayoutManager extends StatefulWidget {
 
 class _LayoutManagerState extends State<LayoutManager> {
   int _currentIndex = 0;
-
   final FolderLogic _folderLogic = FolderLogic();
 
   @override
@@ -38,23 +37,19 @@ class _LayoutManagerState extends State<LayoutManager> {
       SettingsPage(folderLogic: _folderLogic, themeLogic: widget.themeLogic),
     ];
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        //breakpoint 600px
-        if (Platform.isAndroid || Platform.isIOS) {
-          return MobileLayout(
-            currentIndex: _currentIndex,
-            onIndexChanged: (index) => setState(() => _currentIndex = index),
-            pages: pages,
-          );
-        } else {
-          return DesktopLayout(
-            currentIndex: _currentIndex,
-            onIndexChanged: (index) => setState(() => _currentIndex = index),
-            pages: pages,
-          );
-        }
-      },
-    );
+    // STRICT PLATFORM CHECK: Phones get Mobile UI, Computers get Desktop UI.
+    if (Platform.isAndroid || Platform.isIOS) {
+      return MobileLayout(
+        currentIndex: _currentIndex,
+        onIndexChanged: (index) => setState(() => _currentIndex = index),
+        pages: pages,
+      );
+    } else {
+      return DesktopLayout(
+        currentIndex: _currentIndex,
+        onIndexChanged: (index) => setState(() => _currentIndex = index),
+        pages: pages,
+      );
+    }
   }
 }
