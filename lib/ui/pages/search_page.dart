@@ -23,23 +23,60 @@ class _SearchPageState extends State<SearchPage> {
   @override
   void initState() {
     super.initState();
-    _loadRecentNotes();
+    _loadInitialData();
+    // 1. LISTEN for changes in the folder (deletes, syncs, updates)
+    widget.folderLogic.addListener(_onLogicUpdated);
+  }
+
+  @override
+  void dispose() {
+    // 2. REMOVE listener to prevent memory leaks
+    widget.folderLogic.removeListener(_onLogicUpdated);
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  // 3. Whenever FolderLogic changes, re-run the search/recent fetch
+  void _onLogicUpdated() {
+    if (mounted) {
+      _performSearch(_searchController.text);
+    }
+  }
+
+  Future<void> _loadInitialData() async {
+    await _loadRecentNotes();
   }
 
   Future<void> _loadRecentNotes() async {
     final recent = await widget.folderLogic.dbService.getRecentNotes();
-    setState(() => _searchResults = recent);
+    if (mounted) {
+      setState(() {
+        _searchResults = recent;
+        // Check if our selected note was deleted during a sync/delete action
+        if (_selectedNote != null) {
+          bool stillExists = widget.folderLogic.allNotes.any(
+            (n) => n.filePath == _selectedNote!.filePath,
+          );
+          if (!stillExists) _selectedNote = null;
+        }
+      });
+    }
   }
 
   Future<void> _performSearch(String query) async {
     if (query.trim().isEmpty) {
-      setState(() => _isSearching = false);
+      if (mounted) setState(() => _isSearching = false);
       _loadRecentNotes();
       return;
     }
-    setState(() => _isSearching = true);
+
     final results = await widget.folderLogic.dbService.searchNotes(query);
-    setState(() => _searchResults = results);
+    if (mounted) {
+      setState(() {
+        _isSearching = true;
+        _searchResults = results;
+      });
+    }
   }
 
   Widget _buildEmptyEditor() {
@@ -73,11 +110,9 @@ class _SearchPageState extends State<SearchPage> {
     final bool isDesktop =
         Platform.isWindows || Platform.isLinux || Platform.isMacOS;
 
-    // FIX: Removed the global padding wrapper so the scrollbar hits the wall!
     Widget listContent = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Top section with padding
         Padding(
           padding: const EdgeInsets.only(left: 16.0, right: 16.0, top: 16.0),
           child: Column(
@@ -86,6 +121,7 @@ class _SearchPageState extends State<SearchPage> {
               TextField(
                 controller: _searchController,
                 onChanged: _performSearch,
+                style: const TextStyle(color: Colors.white),
                 decoration: InputDecoration(
                   filled: true,
                   prefixIcon: const Icon(Icons.search, color: Colors.grey),
@@ -104,19 +140,18 @@ class _SearchPageState extends State<SearchPage> {
               ),
               const SizedBox(height: 20),
               Text(
-                _isSearching ? "Search Results" : "Recent Notes",
+                _isSearching ? "SEARCH RESULTS" : "RECENT NOTES",
                 style: const TextStyle(
                   color: Colors.grey,
                   fontWeight: FontWeight.bold,
                   letterSpacing: 1.2,
+                  fontSize: 12,
                 ),
               ),
               const SizedBox(height: 10),
             ],
           ),
         ),
-
-        // List section with internal padding
         Expanded(
           child: _searchResults.isEmpty
               ? Center(
@@ -126,9 +161,7 @@ class _SearchPageState extends State<SearchPage> {
                   ),
                 )
               : ListView.builder(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16.0,
-                  ), // Padding is inside the list now
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
                   itemCount: _searchResults.length,
                   itemBuilder: (context, index) {
                     final note = _searchResults[index];
@@ -149,14 +182,14 @@ class _SearchPageState extends State<SearchPage> {
                       ),
                       child: ListTile(
                         title: Text(
-                          note.title,
+                          note.title.isEmpty ? "Untitled" : note.title,
                           style: const TextStyle(
                             color: Colors.white,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
                         subtitle: Text(
-                          note.content,
+                          note.content.replaceAll('\n', ' '),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(color: Colors.grey),
@@ -184,32 +217,29 @@ class _SearchPageState extends State<SearchPage> {
       ],
     );
 
-    if (!isDesktop) {
-      return Scaffold(
-        appBar: AppBar(
-          backgroundColor: Colors.transparent,
-          elevation: 0,
-          title: Text(
-            "ARCHIVE",
-            style: TextStyle(color: primaryColor, fontWeight: FontWeight.bold),
-          ),
+    final appBar = AppBar(
+      backgroundColor: Colors.transparent,
+      elevation: 0,
+      title: Text(
+        "ARCHIVE",
+        style: TextStyle(
+          color: primaryColor,
+          fontWeight: FontWeight.bold,
+          letterSpacing: 1.2,
         ),
-        body: listContent,
-      );
+      ),
+    );
+
+    if (!isDesktop) {
+      return Scaffold(appBar: appBar, body: listContent);
     } else {
       return Scaffold(
-        appBar: AppBar(
-          backgroundColor: Colors.transparent,
-          elevation: 0,
-          title: Text(
-            "ARCHIVE",
-            style: TextStyle(color: primaryColor, fontWeight: FontWeight.bold),
-          ),
-        ),
+        appBar: appBar,
         body: ResizableSplitView(
           leftChild: listContent,
           rightChild: _selectedNote != null
               ? NoteEditorPage(
+                  // Use filePath as key so the editor refreshes if you click a different result
                   key: ValueKey(_selectedNote!.filePath),
                   folderLogic: widget.folderLogic,
                   note: _selectedNote,

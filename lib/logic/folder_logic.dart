@@ -363,6 +363,20 @@ class FolderLogic extends ChangeNotifier {
     }
   }
 
+  Future<void> deleteNoteFile(Note note) async {
+    try {
+      final file = File(note.filePath);
+      if (await file.exists()) {
+        await file.delete();
+      }
+      // We also manually trigger a DB removal and refresh for immediate UI feedback
+      await dbService.deleteNoteByPath(note.filePath);
+      await refreshNotesList();
+    } catch (e) {
+      print("Error deleting note file: $e");
+    }
+  }
+
   // NEW: Groups all loaded notes by their tags.
   // Returns a Map where the Key is the tag name, and the Value is a List of Notes.
   Map<String, List<Note>> get clusteredNotes {

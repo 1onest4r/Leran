@@ -60,6 +60,44 @@ class _NoteEditorPageState extends State<NoteEditorPage> {
     super.dispose();
   }
 
+  Future<void> _confirmDelete() async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF1E1E1E),
+        title: const Text("Delete Note", style: TextStyle(color: Colors.white)),
+        content: const Text(
+          "Are you sure you want to delete this file from your folder? This cannot be undone.",
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text("Cancel", style: TextStyle(color: Colors.grey)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text(
+              "Delete",
+              style: TextStyle(color: Colors.redAccent),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true && widget.note != null) {
+      // 1. Prevent dispose() from saving the note again
+      _isSaved = true;
+
+      // 2. Delete the file
+      await widget.folderLogic.deleteNoteFile(widget.note!);
+
+      // 3. Close the editor
+      if (!widget.isEmbedded && mounted) Navigator.pop(context);
+      if (widget.isEmbedded && widget.onClosed != null) widget.onClosed!();
+    }
+  }
+
   void _onFolderLogicUpdated() {
     if (_currentFilePath.isEmpty) return;
 
@@ -128,7 +166,6 @@ class _NoteEditorPageState extends State<NoteEditorPage> {
     if (widget.isEmbedded && widget.onClosed != null) widget.onClosed!();
   }
 
-  @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final primaryColor = theme.colorScheme.primary;
@@ -148,6 +185,13 @@ class _NoteEditorPageState extends State<NoteEditorPage> {
           onPressed: _saveNote,
         ),
         actions: [
+          // ONLY show delete button if the note already exists on disk
+          if (widget.note != null)
+            IconButton(
+              icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
+              tooltip: "Delete Note",
+              onPressed: _confirmDelete,
+            ),
           IconButton(
             icon: Icon(Icons.check, color: primaryColor),
             onPressed: _saveNote,
@@ -160,7 +204,9 @@ class _NoteEditorPageState extends State<NoteEditorPage> {
           children: [
             TextField(
               controller: _titleController,
-              style: theme.textTheme.headlineMedium,
+              style: theme.textTheme.headlineMedium?.copyWith(
+                color: Colors.white,
+              ),
               decoration: const InputDecoration(
                 hintText: "Note Title",
                 hintStyle: TextStyle(color: Colors.grey),
@@ -173,7 +219,9 @@ class _NoteEditorPageState extends State<NoteEditorPage> {
               child: TextField(
                 controller: _contentController,
                 maxLines: null,
-                style: theme.textTheme.bodyLarge,
+                style: theme.textTheme.bodyLarge?.copyWith(
+                  color: Colors.white70,
+                ),
                 decoration: const InputDecoration(
                   hintText: "Start typing...",
                   hintStyle: TextStyle(color: Colors.grey),
