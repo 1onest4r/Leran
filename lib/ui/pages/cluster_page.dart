@@ -177,6 +177,7 @@ class _ClusterNotesPage extends StatefulWidget {
 
 class _ClusterNotesPageState extends State<_ClusterNotesPage> {
   Note? _selectedNote;
+  bool _isCreatingNew = false;
 
   Widget _buildEmptyEditor() {
     return Center(
@@ -221,92 +222,130 @@ class _ClusterNotesPageState extends State<_ClusterNotesPage> {
       ),
     );
 
-    Widget listContent = ListenableBuilder(
-      listenable: widget.folderLogic,
-      builder: (context, _) {
-        final notes = widget.folderLogic.clusteredNotes[widget.tag] ?? [];
-
-        if (notes.isEmpty) {
-          return const Center(
-            child: Text(
-              "No notes left in this cluster.",
-              style: TextStyle(color: Colors.grey),
-            ),
-          );
-        }
-
-        return ListView.builder(
-          padding: const EdgeInsets.all(16),
-          itemCount: notes.length,
-          itemBuilder: (context, index) {
-            final note = notes[index];
-            final bool isSelected =
-                isDesktop && _selectedNote?.filePath == note.filePath;
-
-            return Card(
-              color: isSelected
-                  ? primaryColor.withOpacity(0.15)
-                  : theme.colorScheme.surface,
-              elevation: 0,
-              margin: const EdgeInsets.only(bottom: 12),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-                side: isSelected
-                    ? BorderSide(color: primaryColor, width: 1)
-                    : BorderSide.none,
-              ),
-              child: ListTile(
-                contentPadding: const EdgeInsets.all(16),
-                title: Text(
-                  note.title.isEmpty ? "Untitled" : note.title,
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: theme.colorScheme.onSurface,
-                  ),
+    // This is the Note List + the Floating Action Button
+    Widget listContent = Scaffold(
+      backgroundColor: Colors.transparent, // Keeps the background clean
+      floatingActionButton: FloatingActionButton(
+        backgroundColor: primaryColor,
+        child: const Icon(Icons.add, color: Colors.black),
+        onPressed: () {
+          if (isDesktop) {
+            setState(() {
+              _selectedNote = null;
+              _isCreatingNew = true;
+            });
+          } else {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => NoteEditorPage(
+                  folderLogic: widget.folderLogic,
+                  initialContent: "#${widget.tag}# ", // Pre-tag for the user
                 ),
-                subtitle: Text(
-                  note.content,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(color: Colors.grey),
-                ),
-                onTap: () {
-                  if (isDesktop) {
-                    setState(() => _selectedNote = note);
-                  } else {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => NoteEditorPage(
-                          folderLogic: widget.folderLogic,
-                          note: note,
-                        ),
-                      ),
-                    );
-                  }
-                },
               ),
             );
-          },
-        );
-      },
+          }
+        },
+      ),
+      body: ListenableBuilder(
+        listenable: widget.folderLogic,
+        builder: (context, _) {
+          final notes = widget.folderLogic.clusteredNotes[widget.tag] ?? [];
+
+          if (notes.isEmpty && !_isCreatingNew) {
+            return const Center(
+              child: Text(
+                "No notes in this cluster.",
+                style: TextStyle(color: Colors.grey),
+              ),
+            );
+          }
+
+          return ListView.builder(
+            padding: const EdgeInsets.all(16),
+            itemCount: notes.length,
+            itemBuilder: (context, index) {
+              final note = notes[index];
+              final bool isSelected =
+                  isDesktop &&
+                  _selectedNote?.filePath == note.filePath &&
+                  !_isCreatingNew;
+
+              return Card(
+                color: isSelected
+                    ? primaryColor.withOpacity(0.15)
+                    : theme.colorScheme.surface,
+                elevation: 0,
+                margin: const EdgeInsets.only(bottom: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  side: isSelected
+                      ? BorderSide(color: primaryColor, width: 1)
+                      : BorderSide.none,
+                ),
+                child: ListTile(
+                  contentPadding: const EdgeInsets.all(16),
+                  title: Text(
+                    note.title.isEmpty ? "Untitled" : note.title,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                  subtitle: Text(
+                    note.content,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(color: Colors.grey),
+                  ),
+                  onTap: () {
+                    if (isDesktop) {
+                      setState(() {
+                        _selectedNote = note;
+                        _isCreatingNew = false;
+                      });
+                    } else {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => NoteEditorPage(
+                            folderLogic: widget.folderLogic,
+                            note: note,
+                          ),
+                        ),
+                      );
+                    }
+                  },
+                ),
+              );
+            },
+          );
+        },
+      ),
     );
 
+    // Logic to decide between Split View (Desktop) and Single View (Mobile)
     if (!isDesktop) {
       return Scaffold(appBar: appBar, body: listContent);
     } else {
-      // Internal split view still active for Desktop note browsing
       return Scaffold(
         appBar: appBar,
         body: ResizableSplitView(
-          leftChild: listContent,
-          rightChild: _selectedNote != null
+          leftChild:
+              listContent, // The list and the button are here (left side)
+          rightChild: (_selectedNote != null || _isCreatingNew)
               ? NoteEditorPage(
-                  key: ValueKey(_selectedNote!.filePath),
+                  key: ValueKey(
+                    _selectedNote?.filePath ?? "new_note_${widget.tag}",
+                  ),
                   folderLogic: widget.folderLogic,
                   note: _selectedNote,
+                  initialContent: _isCreatingNew ? "#${widget.tag}# " : null,
                   isEmbedded: true,
-                  onClosed: () => setState(() => _selectedNote = null),
+                  onClosed: () => setState(() {
+                    _selectedNote = null;
+                    _isCreatingNew = false;
+                  }),
                 )
               : _buildEmptyEditor(),
         ),

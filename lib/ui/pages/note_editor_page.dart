@@ -8,6 +8,7 @@ class NoteEditorPage extends StatefulWidget {
 
   final bool isEmbedded;
   final VoidCallback? onClosed;
+  final String? initialContent;
 
   const NoteEditorPage({
     super.key,
@@ -15,6 +16,7 @@ class NoteEditorPage extends StatefulWidget {
     this.note,
     this.isEmbedded = false,
     this.onClosed,
+    this.initialContent,
   });
 
   @override
@@ -37,13 +39,14 @@ class _NoteEditorPageState extends State<NoteEditorPage> {
     super.initState();
     _titleController = TextEditingController(text: widget.note?.title ?? "");
     _contentController = TextEditingController(
-      text: widget.note?.content ?? "",
+      text: widget.note?.content ?? widget.initialContent ?? "",
     );
     _currentFilePath = widget.note?.filePath ?? "";
 
     // Initialize our memory
     _lastKnownDbTitle = widget.note?.title ?? "";
     _lastKnownDbContent = widget.note?.content ?? "";
+    _lastKnownDbContent = _contentController.text;
 
     widget.folderLogic.addListener(_onFolderLogicUpdated);
   }
