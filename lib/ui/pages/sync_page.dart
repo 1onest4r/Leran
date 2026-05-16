@@ -1,259 +1,357 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart'; // <-- Needed for the Clipboard
-import '../../logic/syncthing_logic.dart';
+import 'package:flutter/services.dart';
+import '../../logic/sync_logic.dart';
 import '../../logic/folder_logic.dart';
 
 class SyncPage extends StatefulWidget {
+  final SyncLogic syncLogic;
   final FolderLogic folderLogic;
 
-  const SyncPage({super.key, required this.folderLogic});
+  const SyncPage({
+    super.key,
+    required this.syncLogic,
+    required this.folderLogic,
+  });
 
   @override
   State<SyncPage> createState() => _SyncPageState();
 }
 
 class _SyncPageState extends State<SyncPage> {
-  final SyncthingService _syncService = SyncthingService();
+  final TextEditingController _apiKeyController = TextEditingController();
   final TextEditingController _peerIdController = TextEditingController();
-
-  String? _myDeviceId;
-  bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    _fetchMyId();
+    _apiKeyController.text = widget.syncLogic.apiKey;
+    widget.syncLogic.checkStatus();
   }
 
-  Future<void> _fetchMyId() async {
-    final id = await _syncService.getMyDeviceId();
-    setState(() {
-      _myDeviceId = id;
-      _isLoading = false;
-    });
-  }
-
-  Future<void> _connectToDevice() async {
-    final peerId = _peerIdController.text.trim();
-    if (peerId.isEmpty || widget.folderLogic.folderPath == null) return;
-
-    setState(() => _isLoading = true);
-
-    // 1. Trust the device
-    bool deviceAdded = await _syncService.addDevice(peerId);
-
-    // 2. Share our notes folder with them
-    if (deviceAdded) {
-      await _syncService.shareFolderWithDevice(
-        widget.folderLogic.folderPath!,
-        peerId,
-      );
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              "Device linked and folder shared!",
-              style: TextStyle(color: Colors.white),
-            ),
-            backgroundColor: Colors.green,
-          ),
-        );
-      }
-      _peerIdController.clear();
-    } else {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              "Failed to link device.",
-              style: TextStyle(color: Colors.white),
-            ),
-            backgroundColor: Colors.redAccent,
-          ),
-        );
-      }
-    }
-
-    setState(() => _isLoading = false);
-  }
-
-  void _copyToClipboard() {
-    if (_myDeviceId != null) {
-      Clipboard.setData(ClipboardData(text: _myDeviceId!));
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Device ID copied to clipboard!")),
-      );
-    }
+  @override
+  void dispose() {
+    _apiKeyController.dispose();
+    _peerIdController.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final primaryColor = theme.colorScheme.primary;
-
     return Scaffold(
       appBar: AppBar(
+        title: const Text('Syncthing Control Panel'),
         backgroundColor: Colors.transparent,
         elevation: 0,
-        title: Text(
-          "NETWORK",
-          style: TextStyle(
-            color: primaryColor,
-            fontWeight: FontWeight.bold,
-            letterSpacing: 1.2,
-          ),
+      ),
+      body: ListenableBuilder(
+        listenable: widget.syncLogic,
+        builder: (context, _) {
+          return ListView(
+            padding: const EdgeInsets.all(24.0),
+            children: [
+              _buildSetupCard(),
+              const SizedBox(height: 20),
+              if (widget.syncLogic.isOnline) ...[
+                _buildLocalStatusCard(),
+                const SizedBox(height: 20),
+                _buildPendingRequestsCard(),
+                const SizedBox(height: 20),
+                _buildAddPeerCard(),
+              ],
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildSetupCard() {
+    return Card(
+      elevation: 2,
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              "1. Connect to Local Daemon",
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              "Find your API key in Syncthing GUI > Actions > Settings > General",
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _apiKeyController,
+                    decoration: const InputDecoration(
+                      labelText: "Syncthing API Key",
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                ElevatedButton(
+                  onPressed: () {
+                    widget.syncLogic.saveApiKey(_apiKeyController.text);
+                  },
+                  child: const Text("Save & Connect"),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Icon(
+                  widget.syncLogic.isOnline ? Icons.check_circle : Icons.error,
+                  color: widget.syncLogic.isOnline ? Colors.green : Colors.red,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  widget.syncLogic.isOnline
+                      ? "Daemon Connected"
+                      : "Daemon Offline",
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+                if (widget.syncLogic.isFetching)
+                  const Padding(
+                    padding: EdgeInsets.only(left: 8.0),
+                    child: SizedBox(
+                      width: 12,
+                      height: 12,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
+                  ),
+              ],
+            ),
+          ],
         ),
       ),
-      body: _isLoading
-          ? Center(child: CircularProgressIndicator(color: primaryColor))
-          : _myDeviceId == null
-          ? _buildEngineOffline()
-          : _buildSyncInterface(theme, primaryColor),
     );
   }
 
-  Widget _buildEngineOffline() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.cloud_off,
-            size: 80,
-            color: Colors.redAccent.withOpacity(0.5),
-          ),
-          const SizedBox(height: 20),
-          const Text(
-            "Sync Engine Offline",
-            style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 10),
-          const Text(
-            "The background daemon is not running yet.",
-            style: TextStyle(color: Colors.grey),
-          ),
-        ],
+  Widget _buildLocalStatusCard() {
+    return Card(
+      elevation: 2,
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              "2. Your Device Identity",
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 12),
+            SelectableText(
+              widget.syncLogic.localDeviceId,
+              style: const TextStyle(
+                fontFamily: 'monospace',
+                color: Colors.grey,
+              ),
+            ),
+            const SizedBox(height: 12),
+            ElevatedButton.icon(
+              icon: const Icon(Icons.copy),
+              label: const Text("Copy My ID"),
+              onPressed: () {
+                Clipboard.setData(
+                  ClipboardData(text: widget.syncLogic.localDeviceId),
+                );
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text("Device ID copied!")),
+                );
+              },
+            ),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildSyncInterface(ThemeData theme, Color primaryColor) {
-    return ListView(
-      padding: const EdgeInsets.all(20),
-      children: [
-        // My Device ID Section
-        Container(
-          padding: const EdgeInsets.all(24),
-          decoration: BoxDecoration(
-            color: theme.colorScheme.surface,
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                "Your Device ID",
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 10),
-              const Text(
-                "Share this ID with your other devices to establish a secure, peer-to-peer connection.",
-                style: TextStyle(color: Colors.grey, fontSize: 14),
-              ),
-              const SizedBox(height: 20),
-
-              // ID Display Box
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.black26,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.white10),
+  Widget _buildAddPeerCard() {
+    return Card(
+      elevation: 2,
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              "3. Connect a Peer",
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              "Paste another device's ID here to establish a connection.",
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _peerIdController,
+                    decoration: const InputDecoration(
+                      labelText: "Remote Device ID",
+                    ),
+                  ),
                 ),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: SelectableText(
-                        _myDeviceId!,
-                        style: TextStyle(
-                          color: primaryColor,
-                          fontSize: 13,
-                          fontFamily: 'monospace',
+                const SizedBox(width: 12),
+
+                // --- THIS IS THE UPDATED BUTTON ---
+                ElevatedButton(
+                  onPressed: () async {
+                    if (_peerIdController.text.isNotEmpty) {
+                      if (widget.folderLogic.folderPath == null) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text(
+                              "Error: Open a folder in Leran first!",
+                            ),
+                          ),
+                        );
+                        return;
+                      }
+
+                      // Wait for the logic to finish and catch any errors
+                      String? errorMsg = await widget.syncLogic
+                          .addDeviceAndShareFolder(
+                            _peerIdController.text,
+                            widget.folderLogic.folderPath,
+                          );
+
+                      // Check if it failed or succeeded
+                      if (errorMsg != null) {
+                        // FAILED: Show a RED SnackBar with the exact error
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(errorMsg),
+                            backgroundColor: Colors.red,
+                            duration: const Duration(
+                              seconds: 5,
+                            ), // Keep it up longer to read it
+                          ),
+                        );
+                      } else {
+                        // SUCCESS: Show a GREEN SnackBar
+                        _peerIdController.clear();
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text("Success! Sent to peer."),
+                            backgroundColor: Colors.green,
+                          ),
+                        );
+                      }
+                    }
+                  },
+                  child: const Text("Add Device & Share"),
+                ),
+
+                // ----------------------------------
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPendingRequestsCard() {
+    final pendingDevices = widget.syncLogic.pendingDevices;
+    final pendingFolders = widget.syncLogic.pendingFolders;
+
+    if (pendingDevices.isEmpty && pendingFolders.isEmpty) {
+      return const SizedBox.shrink(); // Hide if nothing is pending
+    }
+
+    return Card(
+      elevation: 4,
+      color: Theme.of(context).colorScheme.primaryContainer,
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              "🔔 Incoming Requests",
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 12),
+
+            // Pending Devices List
+            ...pendingDevices.entries.map((entry) {
+              String deviceId = entry.key;
+              String deviceName = entry.value['name'] ?? 'Unknown Device';
+              return ListTile(
+                tileColor: Theme.of(context).colorScheme.surface,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                leading: const Icon(Icons.computer, color: Colors.blue),
+                title: Text("Device Request: $deviceName"),
+                subtitle: Text(
+                  deviceId,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                trailing: ElevatedButton(
+                  onPressed: () =>
+                      widget.syncLogic.acceptPendingDevice(deviceId),
+                  child: const Text("Accept"),
+                ),
+              );
+            }).toList(),
+
+            if (pendingDevices.isNotEmpty && pendingFolders.isNotEmpty)
+              const SizedBox(height: 12),
+
+            // Pending Folders List
+            ...pendingFolders.entries.map((entry) {
+              String folderId = entry.key;
+              String folderLabel = entry.value['label'] ?? 'Unknown Folder';
+
+              // Extract the device ID that offered this folder
+              Map offeredBy = entry.value['offeredBy'] ?? {};
+              String remoteDeviceId = offeredBy.keys.isNotEmpty
+                  ? offeredBy.keys.first
+                  : '';
+
+              return ListTile(
+                tileColor: Theme.of(context).colorScheme.surface,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                leading: const Icon(Icons.folder_shared, color: Colors.orange),
+                title: Text("Folder Request: $folderLabel"),
+                subtitle: const Text("Requires a folder to be open in Leran"),
+                trailing: ElevatedButton(
+                  onPressed: () {
+                    if (widget.folderLogic.folderPath == null) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text(
+                            "Error: Open a folder in Leran to store these files!",
+                          ),
                         ),
-                      ),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.copy, color: Colors.grey),
-                      onPressed: _copyToClipboard,
-                      tooltip: "Copy ID",
-                    ),
-                  ],
+                      );
+                      return;
+                    }
+                    widget.syncLogic.acceptPendingFolder(
+                      folderId,
+                      folderLabel,
+                      remoteDeviceId,
+                      widget.folderLogic.folderPath!,
+                    );
+                  },
+                  child: const Text("Accept Folder"),
                 ),
-              ),
-            ],
-          ),
+              );
+            }).toList(),
+          ],
         ),
-
-        const SizedBox(height: 30),
-
-        // Link Device Section
-        Container(
-          padding: const EdgeInsets.all(24),
-          decoration: BoxDecoration(
-            color: theme.colorScheme.surface,
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                "Link a Device",
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 10),
-              const Text(
-                "Enter the ID of the device you want to sync with.",
-                style: TextStyle(color: Colors.grey, fontSize: 14),
-              ),
-              const SizedBox(height: 20),
-              TextField(
-                controller: _peerIdController,
-                decoration: const InputDecoration(
-                  hintText: "Paste Device ID here...",
-                  prefixIcon: Icon(Icons.link),
-                ),
-              ),
-              const SizedBox(height: 20),
-              SizedBox(
-                width: double.infinity,
-                height: 50,
-                child: ElevatedButton.icon(
-                  onPressed: widget.folderLogic.folderPath == null
-                      ? null
-                      : _connectToDevice,
-                  icon: const Icon(Icons.sync, color: Colors.black),
-                  label: const Text(
-                    "Connect & Sync Notes",
-                    style: TextStyle(
-                      color: Colors.black,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              ),
-              if (widget.folderLogic.folderPath == null)
-                const Padding(
-                  padding: EdgeInsets.only(top: 12.0),
-                  child: Text(
-                    "Please select a local folder in Settings first.",
-                    style: TextStyle(color: Colors.redAccent, fontSize: 12),
-                  ),
-                ),
-            ],
-          ),
-        ),
-      ],
+      ),
     );
   }
 }

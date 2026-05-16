@@ -6,10 +6,15 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:leran/ui/styling/theme_palette.dart';
 import 'package:leran/ui/styling/layout_manager.dart';
 import 'package:leran/logic/theme_logic.dart';
+import 'package:leran/logic/daemon_logic.dart';
+
+final daemonManager = DaemonManager();
 
 void main() async {
   // 1. Mandatory: Ensures Flutter is ready before we talk to the OS
   WidgetsFlutterBinding.ensureInitialized();
+
+  await daemonManager.startDaemon();
 
   // initialize SQLite FFI for desktop
   if (Platform.isWindows || Platform.isLinux) {
@@ -38,6 +43,10 @@ void main() async {
     windowManager.waitUntilReadyToShow(windowOptions, () async {
       await windowManager.show();
       await windowManager.focus();
+
+      windowManager.setPreventClose(
+        false,
+      ); //ensure daemon dies when window closes
     });
   }
 
