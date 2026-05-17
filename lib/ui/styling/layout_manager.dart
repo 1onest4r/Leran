@@ -14,7 +14,14 @@ import 'mobile_layout.dart';
 
 class LayoutManager extends StatefulWidget {
   final ThemeLogic themeLogic;
-  const LayoutManager({super.key, required this.themeLogic});
+  final FolderLogic folderLogic;
+  final SyncLogic syncLogic;
+  const LayoutManager({
+    super.key,
+    required this.themeLogic,
+    required this.folderLogic,
+    required this.syncLogic,
+  });
 
   @override
   State<LayoutManager> createState() => _LayoutManagerState();
@@ -22,27 +29,22 @@ class LayoutManager extends StatefulWidget {
 
 class _LayoutManagerState extends State<LayoutManager> {
   int _currentIndex = 0;
-  final FolderLogic _folderLogic = FolderLogic();
-  final SyncLogic _synclogic = SyncLogic();
-
-  @override
-  void dispose() {
-    _folderLogic.dispose();
-    _synclogic.dispose();
-    super.dispose();
-  }
 
   @override
   Widget build(BuildContext context) {
+    // These pages now use the logic instances passed down from the root of the app
     final List<Widget> pages = [
-      HomePage(folderLogic: _folderLogic),
-      SearchPage(folderLogic: _folderLogic),
-      ClusterPage(folderLogic: _folderLogic),
-      SyncPage(syncLogic: _synclogic, folderLogic: _folderLogic),
-      SettingsPage(folderLogic: _folderLogic, themeLogic: widget.themeLogic),
+      HomePage(folderLogic: widget.folderLogic),
+      SearchPage(folderLogic: widget.folderLogic),
+      ClusterPage(folderLogic: widget.folderLogic),
+      SyncPage(syncLogic: widget.syncLogic, folderLogic: widget.folderLogic),
+      SettingsPage(
+        folderLogic: widget.folderLogic,
+        themeLogic: widget.themeLogic,
+      ),
     ];
 
-    // STRICT PLATFORM CHECK: Phones get Mobile UI, Computers get Desktop UI.
+    // Platform detection for UI switching
     if (Platform.isAndroid || Platform.isIOS) {
       return MobileLayout(
         currentIndex: _currentIndex,

@@ -7,75 +7,95 @@ import 'package:leran/ui/styling/theme_palette.dart';
 import 'package:leran/ui/styling/layout_manager.dart';
 import 'package:leran/logic/theme_logic.dart';
 import 'package:leran/logic/daemon_logic.dart';
+import 'package:leran/logic/folder_logic.dart'; // Added
+import 'package:leran/logic/sync_logic.dart'; // Added
 
 final daemonManager = DaemonManager();
 
 void main() async {
-  // 1. Mandatory: Ensures Flutter is ready before we talk to the OS
   WidgetsFlutterBinding.ensureInitialized();
 
+  // 1. Start the Syncthing Daemon (Generates the dynamic API Key)
   await daemonManager.startDaemon();
 
-  // initialize SQLite FFI for desktop
+  // 2. Initialize Logic Classes
+  final themeLogic = ThemeLogic();
+  final folderLogic = FolderLogic();
+  final syncLogic = SyncLogic();
+
+  // 3. Connect the Daemon's API key to the SyncLogic
+  // This allows the UI to talk to the engine we just started
+  if (daemonManager.currentApiKey != null) {
+    syncLogic.updateSessionKey(daemonManager.currentApiKey!);
+  }
+
+  // Initialize SQLite for desktop
   if (Platform.isWindows || Platform.isLinux) {
     sqfliteFfiInit();
     databaseFactory = databaseFactoryFfi;
   }
 
-  // 2. Check for Desktop (Linux/Windows/Mac)
+  // 4. Desktop Window Setup
   if (Platform.isLinux || Platform.isWindows || Platform.isMacOS) {
-    // Initialize the window manager
     await windowManager.ensureInitialized();
 
     WindowOptions windowOptions = const WindowOptions(
-      size: Size(1280, 720), // The default size when the app opens
-      minimumSize: Size(
-        360,
-        500,
-      ), // THE HARD LOCK: User cannot shrink smaller than this
-      center: true, // Opens the app in the middle of the screen
+      size: Size(1280, 720),
+      minimumSize: Size(360, 500),
+      center: true,
       backgroundColor: Colors.transparent,
       skipTaskbar: false,
-      title: "leran", // Your App Name
+      title: "leran",
     );
 
-    // 3. Wait until the window is ready, then show it
     windowManager.waitUntilReadyToShow(windowOptions, () async {
       await windowManager.show();
       await windowManager.focus();
-
-      windowManager.setPreventClose(
-        false,
-      ); //ensure daemon dies when window closes
+      windowManager.setPreventClose(false);
     });
   }
 
-  final themeLogic = ThemeLogic();
   await themeLogic.loadSettings();
 
-  // 4. Finally, start the app (This runs on both Android and Linux)
-  runApp(LeranApp(themeLogic: themeLogic));
+  // 5. Start the app and pass all logic down
+  runApp(
+    LeranApp(
+      themeLogic: themeLogic,
+      folderLogic: folderLogic,
+      syncLogic: syncLogic,
+    ),
+  );
 }
 
 class LeranApp extends StatelessWidget {
   final ThemeLogic themeLogic;
-  const LeranApp({super.key, required this.themeLogic});
+  final FolderLogic folderLogic;
+  final SyncLogic syncLogic;
+
+  const LeranApp({
+    super.key,
+    required this.themeLogic,
+    required this.folderLogic,
+    required this.syncLogic,
+  });
 
   @override
   Widget build(BuildContext context) {
-    // ListenableBuilder forces the whole app to redraw instantly when theme changes!
     return ListenableBuilder(
       listenable: themeLogic,
       builder: (context, _) {
         return MaterialApp(
           title: 'Leran',
           debugShowCheckedModeBanner: false,
-
           theme: AppTheme.getLightTheme(themeLogic.primaryColor),
           darkTheme: AppTheme.getDarkTheme(themeLogic.primaryColor),
           themeMode: themeLogic.themeMode,
-
-          home: LayoutManager(themeLogic: themeLogic),
+          // LayoutManager now receives the Logic instances to distribute to pages
+          home: LayoutManager(
+            themeLogic: themeLogic,
+            folderLogic: folderLogic,
+            syncLogic: syncLogic,
+          ),
         );
       },
     );

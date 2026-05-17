@@ -5,7 +5,7 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 class SyncLogic extends ChangeNotifier {
-  String apiUrl = 'http://127.0.0.1:8384/rest';
+  String apiUrl = 'http://127.0.0.1:8389/rest';
   String apiKey = ''; // Syncthing requires an API key for security
 
   String localDeviceId = 'Not connected';
@@ -24,6 +24,49 @@ class SyncLogic extends ChangeNotifier {
 
   SyncLogic() {
     _loadSettings();
+    _startPolling();
+  }
+
+  void updateSessionKey(String key) {
+    apiKey = key;
+    print("SyncLogic: Received Session Key: $key");
+    _retryConnection();
+    notifyListeners();
+  }
+
+  // Tries to connect every 2 seconds for a total of 5 times
+  Future<void> _retryConnection() async {
+    int attempts = 0;
+    while (attempts < 5 && !isOnline) {
+      print(
+        "SyncLogic: Attempting to connect to Daemon (Attempt ${attempts + 1})...",
+      );
+      await checkStatus();
+      if (!isOnline) {
+        attempts++;
+        await Future.delayed(const Duration(seconds: 2));
+      }
+    }
+
+    if (isOnline) {
+      print("SyncLogic: Successfully connected to Daemon!");
+      fetchPendingRequests();
+    } else {
+      print(
+        "SyncLogic: Failed to connect after 5 attempts. Check if daemon is running.",
+      );
+    }
+  }
+
+  void _startPolling() {
+    _pollingTimer?.cancel();
+    _pollingTimer = Timer.periodic(const Duration(seconds: 10), (timer) {
+      if (isOnline) {
+        fetchPendingRequests();
+      } else {
+        checkStatus();
+      }
+    });
   }
 
   Future<void> checkStatus() async {
@@ -33,10 +76,21 @@ class SyncLogic extends ChangeNotifier {
     notifyListeners();
 
     try {
+      // Diagnostic 1: Try a No-Auth endpoint first to check if the "Pipe" is open
+      final healthRes = await http
+          .get(Uri.parse('http://127.0.0.1:8389/rest/noauth/health'))
+          .timeout(const Duration(seconds: 2));
+
+      print("SyncLogic: Health Check Status: ${healthRes.statusCode}");
+
+      // Diagnostic 2: The actual Auth request
       final response = await http
           .get(
-            Uri.parse('$apiUrl/system/status'),
-            headers: {'X-API-Key': apiKey},
+            Uri.parse('http://127.0.0.1:8389/rest/system/status'),
+            headers: {
+              'X-API-Key':
+                  apiKey, // This MUST match the key passed to --gui-apikey
+            },
           )
           .timeout(const Duration(seconds: 3));
 
@@ -44,11 +98,17 @@ class SyncLogic extends ChangeNotifier {
         final data = jsonDecode(response.body);
         localDeviceId = data['myID'];
         isOnline = true;
+        print("SyncLogic: Connected! Device: $localDeviceId");
       } else {
+        print(
+          "SyncLogic: Connection Refused by Daemon (Code: ${response.statusCode})",
+        );
+        print("SyncLogic: Response Body: ${response.body}");
         isOnline = false;
       }
     } catch (e) {
-      print("Syncthing API Error: $e");
+      // THIS WILL TELL US THE TRUTH
+      print("SyncLogic: DATA CONNECTION ERROR: $e");
       isOnline = false;
     }
 
@@ -57,26 +117,19 @@ class SyncLogic extends ChangeNotifier {
   }
 
   Future<void> fetchPendingRequests() async {
-    if (!isOnline) return;
-
+    if (!isOnline || apiKey.isEmpty) return;
     try {
-      // Fetch Pending Devices
       final devRes = await http.get(
         Uri.parse('$apiUrl/cluster/pending/devices'),
         headers: {'X-API-Key': apiKey},
       );
-      if (devRes.statusCode == 200) {
-        pendingDevices = jsonDecode(devRes.body);
-      }
+      if (devRes.statusCode == 200) pendingDevices = jsonDecode(devRes.body);
 
-      // Fetch Pending Folders
       final folRes = await http.get(
         Uri.parse('$apiUrl/cluster/pending/folders'),
         headers: {'X-API-Key': apiKey},
       );
-      if (folRes.statusCode == 200) {
-        pendingFolders = jsonDecode(folRes.body);
-      }
+      if (folRes.statusCode == 200) pendingFolders = jsonDecode(folRes.body);
 
       notifyListeners();
     } catch (e) {
@@ -163,8 +216,9 @@ class SyncLogic extends ChangeNotifier {
 
   Future<void> _loadSettings() async {
     final prefs = await SharedPreferences.getInstance();
-    apiKey = prefs.getString('syncthing_api_key') ?? '';
-    if (apiKey.isNotEmpty) {
+    String? savedKey = prefs.getString('syncthing_api_key');
+    if (savedKey != null && apiKey.isEmpty) {
+      apiKey = savedKey;
       checkStatus();
     }
   }
@@ -215,19 +269,22 @@ class SyncLogic extends ChangeNotifier {
   }
 
   // 2. Add a remote device AND share the current workspace
-  // 2. Add a remote device AND share the current workspace
+  // Inside SyncLogic class in sync_logic.dart
+
+  // Modified to include syncType (sendreceive, sendonly, receiveonly)
   Future<String?> addDeviceAndShareFolder(
     String remoteDeviceId,
     String? folderPath,
+    String syncType, // <--- NEW PARAMETER
   ) async {
     if (!isOnline) return "Error: Not connected to local daemon.";
-    if (folderPath == null || folderPath.isEmpty)
+    if (folderPath == null || folderPath.isEmpty) {
       return "Error: No folder selected in Leran.";
+    }
 
     remoteDeviceId = remoteDeviceId.trim();
 
     try {
-      // 1. GET from the correct modern endpoint (/rest/config)
       final configRes = await http.get(
         Uri.parse('$apiUrl/config'),
         headers: {'X-API-Key': apiKey},
@@ -239,11 +296,13 @@ class SyncLogic extends ChangeNotifier {
 
       final config = jsonDecode(configRes.body);
 
+      // Add device
       List devices = config['devices'];
       if (!devices.any((d) => d['deviceID'] == remoteDeviceId)) {
         devices.add({"deviceID": remoteDeviceId});
       }
 
+      // Add or Update folder
       List folders = config['folders'];
       String folderId = "leran-workspace";
       int folderIndex = folders.indexWhere((f) => f['id'] == folderId);
@@ -255,7 +314,7 @@ class SyncLogic extends ChangeNotifier {
           "id": folderId,
           "label": "Leran Notes",
           "path": safePath,
-          "type": "sendreceive",
+          "type": syncType, // <--- APPLIED HERE
           "devices": [
             {"deviceID": localDeviceId},
             {"deviceID": remoteDeviceId},
@@ -267,12 +326,13 @@ class SyncLogic extends ChangeNotifier {
           folderDevices.add({"deviceID": remoteDeviceId});
         }
         folders[folderIndex]['path'] = safePath;
+        folders[folderIndex]['type'] =
+            syncType; // <--- UPDATE EXISTING FOLDER TYPE
       }
 
       config['devices'] = devices;
       config['folders'] = folders;
 
-      // 2. PUT to the correct modern endpoint (/rest/config)
       final putRes = await http.put(
         Uri.parse('$apiUrl/config'),
         headers: {'X-API-Key': apiKey, 'Content-Type': 'application/json'},
@@ -283,7 +343,7 @@ class SyncLogic extends ChangeNotifier {
         return "Syncthing Rejected Config: ${putRes.body}";
       }
 
-      return null; // Null means Success!
+      return null; // Success
     } catch (e) {
       return "Network Exception: $e";
     }
