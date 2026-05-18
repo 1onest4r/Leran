@@ -37,7 +37,8 @@ class SyncLogic extends ChangeNotifier {
   // Tries to connect every 2 seconds for a total of 5 times
   Future<void> _retryConnection() async {
     int attempts = 0;
-    while (attempts < 5 && !isOnline) {
+    // Increased from 5 to 10 attempts
+    while (attempts < 10 && !isOnline) {
       print(
         "SyncLogic: Attempting to connect to Daemon (Attempt ${attempts + 1})...",
       );
@@ -52,9 +53,7 @@ class SyncLogic extends ChangeNotifier {
       print("SyncLogic: Successfully connected to Daemon!");
       fetchPendingRequests();
     } else {
-      print(
-        "SyncLogic: Failed to connect after 5 attempts. Check if daemon is running.",
-      );
+      print("SyncLogic: Failed to connect after 10 attempts.");
     }
   }
 

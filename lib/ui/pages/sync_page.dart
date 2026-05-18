@@ -89,28 +89,30 @@ class _SyncPageState extends State<SyncPage> {
             const SizedBox(height: 8),
             const Text(
               "Find your API key in Syncthing GUI > Actions > Settings > General",
+              style: TextStyle(fontSize: 13, color: Colors.grey),
+            ),
+            const SizedBox(height: 16),
+
+            // FIX: Stack TextField and Button vertically for mobile
+            TextField(
+              controller: _apiKeyController,
+              decoration: const InputDecoration(labelText: "Syncthing API Key"),
             ),
             const SizedBox(height: 12),
-            Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _apiKeyController,
-                    decoration: const InputDecoration(
-                      labelText: "Syncthing API Key",
-                    ),
-                  ),
+            SizedBox(
+              width: double.infinity, // Button takes full width
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
                 ),
-                const SizedBox(width: 12),
-                ElevatedButton(
-                  onPressed: () {
-                    widget.syncLogic.saveApiKey(_apiKeyController.text);
-                  },
-                  child: const Text("Save & Connect"),
-                ),
-              ],
+                onPressed: () {
+                  widget.syncLogic.saveApiKey(_apiKeyController.text);
+                },
+                child: const Text("Save & Connect"),
+              ),
             ),
-            const SizedBox(height: 12),
+
+            const SizedBox(height: 20),
             Row(
               children: [
                 Icon(
@@ -197,7 +199,7 @@ class _SyncPageState extends State<SyncPage> {
             const SizedBox(height: 8),
             const Text(
               "Choose how data should move between this device and the remote device.",
-              style: TextStyle(color: Colors.grey),
+              style: TextStyle(color: Colors.grey, fontSize: 13),
             ),
             const SizedBox(height: 16),
 
@@ -215,11 +217,17 @@ class _SyncPageState extends State<SyncPage> {
                   items: const [
                     DropdownMenuItem(
                       value: 'sendreceive',
+                      // FIX: Wrapped Text in Expanded so it doesn't overflow
                       child: Row(
                         children: [
                           Icon(Icons.sync, color: Colors.blue),
                           SizedBox(width: 10),
-                          Text("Two-Way Sync (Send & Receive)"),
+                          Expanded(
+                            child: Text(
+                              "Two-Way Sync",
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
                         ],
                       ),
                     ),
@@ -229,7 +237,12 @@ class _SyncPageState extends State<SyncPage> {
                         children: [
                           Icon(Icons.upload, color: Colors.orange),
                           SizedBox(width: 10),
-                          Text("Send Only (Backup to remote)"),
+                          Expanded(
+                            child: Text(
+                              "Send Only",
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
                         ],
                       ),
                     ),
@@ -239,7 +252,12 @@ class _SyncPageState extends State<SyncPage> {
                         children: [
                           Icon(Icons.download, color: Colors.green),
                           SizedBox(width: 10),
-                          Text("Receive Only (Download from remote)"),
+                          Expanded(
+                            child: Text(
+                              "Receive Only",
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
                         ],
                       ),
                     ),
@@ -252,69 +270,62 @@ class _SyncPageState extends State<SyncPage> {
             ),
 
             const SizedBox(height: 16),
-            Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _peerIdController,
-                    decoration: const InputDecoration(
-                      labelText: "Remote Device ID",
-                      hintText: "Paste ID here...",
-                    ),
-                  ),
+
+            // FIX: Stack the ID Input and Share Button vertically
+            TextField(
+              controller: _peerIdController,
+              decoration: const InputDecoration(
+                labelText: "Remote Device ID",
+                hintText: "Paste ID here...",
+              ),
+            ),
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity, // Button takes full width
+              child: ElevatedButton.icon(
+                icon: const Icon(Icons.share),
+                label: const Text("Share Folder"),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: primaryColor,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
                 ),
-                const SizedBox(width: 12),
-                ElevatedButton.icon(
-                  icon: const Icon(Icons.share),
-                  label: const Text("Share Folder"),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: primaryColor,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 20,
-                      vertical: 18,
-                    ),
-                  ),
-                  onPressed: () async {
-                    if (_peerIdController.text.isNotEmpty) {
-                      if (widget.folderLogic.folderPath == null) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text(
-                              "Error: Open a folder in Leran first!",
-                            ),
-                          ),
-                        );
-                        return;
-                      }
-
-                      // Passing the selected sync type to the logic
-                      String? errorMsg = await widget.syncLogic
-                          .addDeviceAndShareFolder(
-                            _peerIdController.text,
-                            widget.folderLogic.folderPath,
-                            _selectedSyncType, // <--- PASSED HERE
-                          );
-
-                      if (errorMsg != null) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(errorMsg),
-                            backgroundColor: Colors.red,
-                          ),
-                        );
-                      } else {
-                        _peerIdController.clear();
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text("Success! Sent to peer."),
-                            backgroundColor: Colors.green,
-                          ),
-                        );
-                      }
+                onPressed: () async {
+                  if (_peerIdController.text.isNotEmpty) {
+                    if (widget.folderLogic.folderPath == null) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text("Error: Open a folder in Leran first!"),
+                        ),
+                      );
+                      return;
                     }
-                  },
-                ),
-              ],
+
+                    String? errorMsg = await widget.syncLogic
+                        .addDeviceAndShareFolder(
+                          _peerIdController.text,
+                          widget.folderLogic.folderPath,
+                          _selectedSyncType,
+                        );
+
+                    if (errorMsg != null) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(errorMsg),
+                          backgroundColor: Colors.red,
+                        ),
+                      );
+                    } else {
+                      _peerIdController.clear();
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text("Success! Sent to peer."),
+                          backgroundColor: Colors.green,
+                        ),
+                      );
+                    }
+                  }
+                },
+              ),
             ),
           ],
         ),
